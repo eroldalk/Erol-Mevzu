@@ -1,0 +1,763 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  Scale, Landmark, Globe, Newspaper, Radio, Bell, Sword, Handshake,
+  Zap, Lock, Scroll, Megaphone, Volume2, Flag, Network,
+  Coins, Banknote, CreditCard, TrendingUp, TrendingDown, Building2, BarChart3,
+  Receipt, Briefcase, ShoppingCart, Package, Ship, Plane,
+  Trophy, Medal, Target, Dumbbell, Bike,
+  Leaf, Waves, Flower, Sun, Cloud, CloudSnow, Mountain, Moon,
+  Brain, Eye, Crown, Dna, Heart, GraduationCap, Stethoscope, Users,
+  Film, Music, Palette, Camera, BookOpen, Pen, Mic,
+  Rocket, Lightbulb, Microscope, FlaskConical, Settings2, Bot, Laptop,
+  Smartphone, Telescope, Battery, Satellite, Compass, Wand2, Gamepad2,
+  Sparkles, Flame, Star, Wind, Key, Diamond, Wheat, Clock, Home,
+  ChevronRight, AlertCircle, Shield, Feather, Anchor, Activity, Archive, Award,
+  Coffee, Cpu, Database, Edit3, Globe2, Hash, Info, Mail,
+  Navigation, Power, Tag, Terminal, User, Wifi, Play, Square, Download,
+  Upload, Image, Video, Layers
+} from "lucide-react";
+
+// ============ CSS ARKA PLAN TANIMLARI ============
+const CSS_BACKGROUNDS = [
+  {
+    id:"rain", label:" Yağmur", dark:true,
+    textColor:"#e8f0ff",
+    render:(canvas,ctx,t)=>{
+      // Koyu gece gökyüzü
+      const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+      grad.addColorStop(0,"#0a0a1a");
+      grad.addColorStop(1,"#1a1a2e");
+      ctx.fillStyle=grad;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Yağmur damlaları
+      ctx.strokeStyle="rgba(180,200,255,0.35)";
+      ctx.lineWidth=1;
+      for(let i=0;i<80;i++){
+        const x=(Math.sin(i*7.3+t*0.0003)*canvas.width+canvas.width*1.5)%canvas.width;
+        const y=(i*canvas.height/80+t*0.15)%canvas.height;
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x-4,y+18);
+        ctx.stroke();
+      }
+    }
+  },
+  {
+    id:"sunset", label:" Gün Batımı", dark:false,
+    textColor:"#1a0a00",
+    render:(canvas,ctx,t)=>{
+      const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+      const pulse=Math.sin(t*0.0004)*0.05;
+      grad.addColorStop(0,hsl(${20+pulse*10},80%,${30+pulse*5}%));
+      grad.addColorStop(0.4,hsl(${30+pulse*5},90%,${50+pulse*5}%));
+      grad.addColorStop(0.7,hsl(${45},85%,${65}%));
+      grad.addColorStop(1,hsl(${200},40%,${40}%));
+      ctx.fillStyle=grad;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Güneş
+      const sunY=canvas.height*0.38+Math.sin(t*0.0003)*5;
+      const glow=ctx.createRadialGradient(canvas.width/2,sunY,0,canvas.width/2,sunY,120);
+      glow.addColorStop(0,"rgba(255,220,100,0.9)");
+      glow.addColorStop(0.3,"rgba(255,160,50,0.4)");
+      glow.addColorStop(1,"rgba(255,100,0,0)");
+      ctx.fillStyle=glow;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Yatay çizgiler (bulut silueti)
+      ctx.fillStyle="rgba(255,120,30,0.12)";
+      for(let i=0;i<5;i++){
+        const y=canvas.height*0.3+i*28+Math.sin(t*0.0002+i)*6;
+        ctx.fillRect(0,y,canvas.width,12);
+      }
+    }
+  },
+  {
+    id:"mountain", label:" Dağ", dark:true,
+    textColor:"#e8f4f8",
+    render:(canvas,ctx,t)=>{
+      // Gece gökyüzü
+      const sky=ctx.createLinearGradient(0,0,0,canvas.height);
+      sky.addColorStop(0,"#050a14");
+      sky.addColorStop(0.6,"#0a1528");
+      sky.addColorStop(1,"#1a2540");
+      ctx.fillStyle=sky;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Yıldızlar
+      for(let i=0;i<120;i++){
+        const sx=(i*137.5*canvas.width/100)%canvas.width;
+        const sy=(i*97.3*canvas.height/100)%(canvas.height*0.65);
+        const op=0.4+Math.sin(t*0.002+i)*0.3;
+        ctx.fillStyle=rgba(255,255,255,${op});
+        ctx.beginPath();
+        ctx.arc(sx,sy,i%3===0?1.5:0.8,0,Math.PI*2);
+        ctx.fill();
+      }
+      // Dağ siluetleri
+      const moffset=Math.sin(t*0.00015)*8;
+      ctx.fillStyle="#0d1a0d";
+      ctx.beginPath();
+      ctx.moveTo(0,canvas.height);
+      ctx.lineTo(0,canvas.height*0.72);
+      ctx.lineTo(canvas.width*0.18,canvas.height*0.42+moffset);
+      ctx.lineTo(canvas.width*0.32,canvas.height*0.62);
+      ctx.lineTo(canvas.width*0.5,canvas.height*0.35+moffset*0.5);
+      ctx.lineTo(canvas.width*0.68,canvas.height*0.55);
+      ctx.lineTo(canvas.width*0.82,canvas.height*0.38+moffset*0.7);
+      ctx.lineTo(canvas.width,canvas.height*0.58);
+      ctx.lineTo(canvas.width,canvas.height);
+      ctx.closePath();
+      ctx.fill();
+      // Kar
+      ctx.fillStyle="rgba(220,235,255,0.7)";
+      ctx.beginPath();
+      ctx.moveTo(canvas.width*0.18,canvas.height*0.42+moffset);
+      ctx.lineTo(canvas.width*0.12,canvas.height*0.52);
+      ctx.lineTo(canvas.width*0.24,canvas.height*0.52);
+      ctx.closePath();
+      ctx.fill();
+    }
+  },
+  {
+    id:"fog", label:" Sis", dark:false,
+    textColor:"#1a1a2a",
+    render:(canvas,ctx,t)=>{
+      ctx.fillStyle="#c8ccd8";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Sis katmanları
+      for(let i=0;i<6;i++){
+        const y=canvas.height*(0.3+i*0.12)+Math.sin(t*0.0002+i*1.2)*20;
+        const op=0.08+Math.sin(t*0.0003+i)*0.04;
+        const grad=ctx.createLinearGradient(0,y,0,y+canvas.height*0.15);
+        grad.addColorStop(0,rgba(255,255,255,${op}));
+        grad.addColorStop(1,"rgba(255,255,255,0)");
+        ctx.fillStyle=grad;
+        ctx.fillRect(0,y,canvas.width,canvas.height*0.15);
+      }
+      // Uzaktaki ağaçlar
+      ctx.fillStyle="rgba(80,80,100,0.3)";
+      for(let i=0;i<12;i++){
+        const tx=canvas.width*i/12+Math.sin(i*3.7)*20;
+        const th=30+i%3*15;
+        ctx.fillRect(tx,canvas.height*0.7-th,4,th);
+        ctx.beginPath();
+        ctx.arc(tx+2,canvas.height*0.7-th-15,12,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  },
+  {
+    id:"aurora", label:" Kuzey Işıkları", dark:true,
+    textColor:"#e0fff4",
+    render:(canvas,ctx,t)=>{
+      ctx.fillStyle="#020810";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Aurora dalgaları
+      const colors=[
+        [0,255,150],[0,200,255],[150,0,255],[0,255,100]
+      ];
+      for(let c=0;c<4;c++){
+        const [r,g,b]=colors[c];
+        ctx.beginPath();
+        const yBase=canvas.height*(0.2+c*0.08)+Math.sin(t*0.0004+c)*30;
+        ctx.moveTo(0,yBase);
+        for(let x=0;x<=canvas.width;x+=4){
+          const y=yBase+Math.sin(x*0.008+t*0.001+c*1.5)*40+Math.sin(x*0.02+t*0.0007)*15;
+          ctx.lineTo(x,y);
+        }
+        ctx.lineTo(canvas.width,0);
+        ctx.lineTo(0,0);
+        ctx.closePath();
+        const op=0.06+Math.sin(t*0.0005+c)*0.03;
+        ctx.fillStyle=rgba(${r},${g},${b},${op});
+        ctx.fill();
+      }
+      // Yıldızlar
+      for(let i=0;i<60;i++){
+        const sx=(i*173)%canvas.width;
+        const sy=(i*97)%(canvas.height*0.5);
+        const op=0.3+Math.sin(t*0.003+i)*0.25;
+        ctx.fillStyle=rgba(255,255,255,${op});
+        ctx.beginPath();
+        ctx.arc(sx,sy,0.8,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  },
+  {
+    id:"ocean", label:" Okyanus", dark:true,
+    textColor:"#e0f4ff",
+    render:(canvas,ctx,t)=>{
+      const sky=ctx.createLinearGradient(0,0,0,canvas.height*0.55);
+      sky.addColorStop(0,"#0a1520");
+      sky.addColorStop(1,"#0d2a40");
+      ctx.fillStyle=sky;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Su
+      const water=ctx.createLinearGradient(0,canvas.height*0.55,0,canvas.height);
+      water.addColorStop(0,"#0d3a5c");
+      water.addColorStop(1,"#061828");
+      ctx.fillStyle=water;
+      ctx.fillRect(0,canvas.height*0.55,canvas.width,canvas.height*0.45);
+      // Dalgalar
+      for(let w=0;w<5;w++){
+        ctx.beginPath();
+        const wy=canvas.height*(0.52+w*0.09)+Math.sin(t*0.001+w)*12;
+        ctx.moveTo(0,wy);
+        for(let x=0;x<=canvas.width;x+=3){
+          const y=wy+Math.sin(x*0.015+t*0.002+w*0.8)*8;
+          ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle=rgba(100,200,255,${0.15-w*0.02});
+        ctx.lineWidth=1.5;
+        ctx.stroke();
+      }
+      // Ay yansıması
+      const moonX=canvas.width*0.7;
+      const moonY=canvas.height*0.2;
+      const moonGlow=ctx.createRadialGradient(moonX,moonY,0,moonX,moonY,80);
+      moonGlow.addColorStop(0,"rgba(255,245,200,0.8)");
+      moonGlow.addColorStop(0.3,"rgba(255,245,200,0.2)");
+      moonGlow.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=moonGlow;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+  },
+];
+
+// ============ ICON DATA ============
+const ICON_CATS = {
+  Gündem:[{n:"Scale",C:Scale},{n:"Landmark",C:Landmark},{n:"Globe",C:Globe},{n:"Newspaper",C:Newspaper},{n:"Scroll",C:Scroll},{n:"Megaphone",C:Megaphone},{n:"Bell",C:Bell},{n:"Sword",C:Sword},{n:"Handshake",C:Handshake},{n:"Lock",C:Lock},{n:"Flag",C:Flag},{n:"Zap",C:Zap},{n:"Radio",C:Radio},{n:"Network",C:Network},{n:"Shield",C:Shield},{n:"AlertCircle",C:AlertCircle}],
+  Ekonomi:[{n:"Coins",C:Coins},{n:"Banknote",C:Banknote},{n:"CreditCard",C:CreditCard},{n:"TrendingUp",C:TrendingUp},{n:"TrendingDown",C:TrendingDown},{n:"Building2",C:Building2},{n:"BarChart3",C:BarChart3},{n:"Receipt",C:Receipt},{n:"Briefcase",C:Briefcase},{n:"ShoppingCart",C:ShoppingCart},{n:"Package",C:Package},{n:"Ship",C:Ship},{n:"Plane",C:Plane},{n:"Diamond",C:Diamond}],
+  Spor:[{n:"Trophy",C:Trophy},{n:"Medal",C:Medal},{n:"Target",C:Target},{n:"Dumbbell",C:Dumbbell},{n:"Bike",C:Bike},{n:"Activity",C:Activity},{n:"Award",C:Award}],
+  Doğa:[{n:"Leaf",C:Leaf},{n:"Waves",C:Waves},{n:"Flower",C:Flower},{n:"Sun",C:Sun},{n:"Cloud",C:Cloud},{n:"CloudSnow",C:CloudSnow},{n:"Mountain",C:Mountain},{n:"Moon",C:Moon},{n:"Flame",C:Flame},{n:"Wind",C:Wind},{n:"Wheat",C:Wheat},{n:"Feather",C:Feather}],
+  İnsan:[{n:"Brain",C:Brain},{n:"Eye",C:Eye},{n:"Crown",C:Crown},{n:"Dna",C:Dna},{n:"Heart",C:Heart},{n:"GraduationCap",C:GraduationCap},{n:"Stethoscope",C:Stethoscope},{n:"Users",C:Users},{n:"User",C:User},{n:"Coffee",C:Coffee}],
+  Sanat:[{n:"Film",C:Film},{n:"Music",C:Music},{n:"Palette",C:Palette},{n:"Camera",C:Camera},{n:"BookOpen",C:BookOpen},{n:"Pen",C:Pen},{n:"Mic",C:Mic},{n:"Edit3",C:Edit3}],
+  Teknoloji:[{n:"Rocket",C:Rocket},{n:"Lightbulb",C:Lightbulb},{n:"Microscope",C:Microscope},{n:"FlaskConical",C:FlaskConical},{n:"Settings2",C:Settings2},{n:"Bot",C:Bot},{n:"Laptop",C:Laptop},{n:"Smartphone",C:Smartphone},{n:"Telescope",C:Telescope},{n:"Cpu",C:Cpu},{n:"Wand2",C:Wand2},{n:"Gamepad2",C:Gamepad2},{n:"Terminal",C:Terminal},{n:"Database",C:Database},{n:"Wifi",C:Wifi}],
+  Sembol:[{n:"Sparkles",C:Sparkles},{n:"Flame",C:Flame},{n:"Star",C:Star},{n:"Key",C:Key},{n:"Diamond",C:Diamond},{n:"Moon",C:Moon},{n:"Compass",C:Compass},{n:"Clock",C:Clock},{n:"Home",C:Home},{n:"Navigation",C:Navigation},{n:"Info",C:Info},{n:"Mail",C:Mail}],
+};
+
+const EMOJI_CATS = {
+  Gündem:["","","","","","","","","","","","","","","","","","","",""],
+  Ekonomi:["","","","","","","","","","","","","","","","","","","",""],
+  Spor:["","","","","","","","","","","","","","","","","","","",""],
+  Doğa:["","","","","","","","","","","","","","","","","","","",""],
+  İnsan:["","","","","","","","","","","","","","","","","","","",""],
+  Sanat:["","","","","","","","","","","","","","","","","","","",""],
+  Teknoloji:["","","","","","","","","","","","","","","","","","","",""],
+  Sembol:["","","","","","","","","","","","","","","","","","","",""],
+};
+
+const DEFAULT = {
+  bgType:"css",        // "css" | "media"
+  cssBgId:"rain",
+  mediaUrl:null,
+  mediaType:null,      // "image" | "video"
+  overlayOpacity:0.45, // karartma
+  quote:"Bir çocuğu koruyamayanlar,\ngeleceği koruyamaz.",
+  author:"Nelson Mandela",
+  tag:"MEVZU",
+  fontSize:28,
+  textColor:"#e8f0ff",
+  iconMode:"none",     // "none" | "emoji" | "svg"
+  emoji:"", svgIcon:"Scale",
+  iconSize:120, iconColor:"", iconOpacity:0.15,
+  duration:7,
+};
+
+// ============ HOOKS ============
+function useDrag(){
+  const [pos,setPos]=useState({x:0,y:0});
+  const drag=useRef(false);
+  const orig=useRef({mx:0,my:0,px:0,py:0});
+  useEffect(()=>{
+    const move=e=>{
+      if(!drag.current)return;
+      if(e.cancelable)e.preventDefault();
+      const cx=e.touches?e.touches[0].clientX:e.clientX;
+      const cy=e.touches?e.touches[0].clientY:e.clientY;
+      setPos({x:orig.current.px+cx-orig.current.mx,y:orig.current.py+cy-orig.current.my});
+    };
+    const up=()=>{drag.current=false;};
+    window.addEventListener("mousemove",move);
+    window.addEventListener("mouseup",up);
+    window.addEventListener("touchmove",move,{passive:false});
+    window.addEventListener("touchend",up);
+    return()=>{window.removeEventListener("mousemove",move);window.removeEventListener("mouseup",up);window.removeEventListener("touchmove",move);window.removeEventListener("touchend",up);};
+  },[]);
+  const onDown=(e,cur)=>{e.preventDefault();drag.current=true;const cx=e.touches?e.touches[0].clientX:e.clientX;const cy=e.touches?e.touches[0].clientY:e.clientY;orig.current={mx:cx,my:cy,px:cur?cur.x:pos.x,py:cur?cur.y:pos.y};};
+  return{pos,onDown};
+}
+
+// ============ CSS CANVAS ARKA PLAN ============
+function CssBgCanvas({bgId,width,height}){
+  const canvasRef=useRef(null);
+  const animRef=useRef(null);
+  const bg=CSS_BACKGROUNDS.find(b=>b.id===bgId)||CSS_BACKGROUNDS[0];
+  useEffect(()=>{
+    const canvas=canvasRef.current;
+    if(!canvas)return;
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext("2d");
+    let start=null;
+    const loop=ts=>{
+      if(!start)start=ts;
+      bg.render(canvas,ctx,ts-start);
+      animRef.current=requestAnimationFrame(loop);
+    };
+    animRef.current=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(animRef.current);
+  },[bgId,width,height]);
+  return <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",zIndex:0}}/>;
+}
+
+// ============ ANİMASYONLU METİN ============
+function AnimText({quote,author,tag,textColor,phase,fontSize}){
+  const lines=quote.split("\n");
+  return(
+    <div style={{position:"absolute",zIndex:4,left:0,right:0,bottom:"20%",padding:"0 28px"}}>
+      {/* Etiket */}
+      <div style={{
+        fontSize:10,letterSpacing:5,textTransform:"uppercase",
+        color:textColor,opacity:.6,marginBottom:16,
+        transition:"opacity 0.8s ease, transform 0.8s ease",
+        opacity:phase>=1?0.6:0,
+        transform:phase>=1?"translateY(0)":"translateY(10px)"
+      }}>{tag}</div>
+      {/* Satır satır söz */}
+      {lines.map((line,i)=>(
+        <div key={i} style={{
+          fontFamily:"Georgia,serif",
+          fontSize:fontSize,
+          fontStyle:"italic",
+          fontWeight: i===Math.floor(lines.length/2)?700:400,
+          color:i===Math.floor(lines.length/2)?hsl(40,90%,${textColor==="#1a1a2a"?"35%":"70%"})  :textColor,
+          lineHeight:1.45,
+          marginBottom:4,
+          transition:transform 0.9s cubic-bezier(0.16,1,0.3,1) ${i*0.15}s, opacity 0.9s ease ${i*0.15}s,
+          transform:phase>=2?"translateX(0)":"translateX(-80px)",
+          opacity:phase>=2?1:0,
+          textShadow:"0 2px 20px rgba(0,0,0,0.5)",
+        }}>{line}</div>
+      ))}
+      {/* Yazar */}
+      <div style={{
+        display:"flex",alignItems:"center",gap:10,marginTop:20,
+        transition:"opacity 1s ease 0.5s",
+        opacity:phase>=3?1:0,
+      }}>
+        <div style={{width:24,height:1,background:textColor,opacity:.4}}/>
+        <span style={{fontSize:11,fontWeight:300,letterSpacing:3,textTransform:"uppercase",color:textColor,opacity:.7,textShadow:"0 1px 8px rgba(0,0,0,0.5)"}}>{author}</span>
+      </div>
+    </div>
+  );
+}
+
+// ============ LOGO ============
+const Logo=({color})=>(
+  <div style={{position:"absolute",top:28,left:22,zIndex:5,display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+    <div style={{display:"flex",alignItems:"flex-end",gap:1}}>
+      <span style={{fontFamily:"Georgia,serif",fontSize:14,color,lineHeight:1,marginBottom:2,textShadow:"0 1px 8px rgba(0,0,0,0.5)"}}>'</span>
+      <span style={{fontSize:18,fontWeight:700,color,lineHeight:1,textShadow:"0 1px 8px rgba(0,0,0,0.5)"}}>#</span>
+    </div>
+    <span style={{fontSize:9,fontWeight:700,letterSpacing:3,color,textShadow:"0 1px 8px rgba(0,0,0,0.5)"}}>MEVZU</span>
+  </div>
+);
+
+// ============ ANA REELS KARTI ============
+function ReelsCard({s,animated,cardRef}){
+  const [phase,setPhase]=useState(0);
+  const W="min(320px,calc((100vw - 32px)*0.5625))";
+  const H="min(568px,calc(100vw - 32px))";
+  const cardW=320,cardH=568;
+  const bg=CSS_BACKGROUNDS.find(b=>b.id===s.cssBgId)||CSS_BACKGROUNDS[0];
+  const textCol=s.textColor||(bg.dark?"#e8f0ff":"#1a1a2a");
+
+  useEffect(()=>{
+    if(!animated){setPhase(0);return;}
+    setPhase(0);
+    const t1=setTimeout(()=>setPhase(1),200);
+    const t2=setTimeout(()=>setPhase(2),700);
+    const t3=setTimeout(()=>setPhase(3),1800);
+    return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+  },[animated]);
+
+  return(
+    <div ref={cardRef} style={{width:W,height:H,position:"relative",overflow:"hidden",flexShrink:0,background:"#000"}}>
+      {/* CSS Arka Plan */}
+      {s.bgType==="css"&&<CssBgCanvas bgId={s.cssBgId} width={cardW} height={cardH}/>}
+
+      {/* Medya arka plan */}
+      {s.bgType==="media"&&s.mediaUrl&&(
+        s.mediaType==="video"
+          ?<video src={s.mediaUrl} autoPlay loop muted playsInline
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>
+          :<img src={s.mediaUrl}
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>
+      )}
+
+      {/* Karartma overlay */}
+      <div style={{position:"absolute",inset:0,zIndex:1,
+        background:linear-gradient(to bottom, rgba(0,0,0,${s.overlayOpacity*0.6}) 0%, rgba(0,0,0,${s.overlayOpacity}) 50%, rgba(0,0,0,${s.overlayOpacity*0.8}) 100%)}}/>
+
+      {/* Logo */}
+      <Logo color={textCol}/>
+
+      {/* Animasyonlu metin */}
+      <AnimText quote={s.quote} author={s.author} tag={s.tag}
+        textColor={textCol} phase={phase} fontSize={s.fontSize}/>
+    </div>
+  );
+}
+
+// ============ VİDEO KAYIT ============
+function VideoRecorder({cardRef,duration,onAnimStart}){
+  const [status,setStatus]=useState("idle");
+  const [countdown,setCountdown]=useState(3);
+  const [progress,setProgress]=useState(0);
+  const [videoUrl,setVideoUrl]=useState(null);
+  const mediaRec=useRef(null);
+  const chunks=useRef([]);
+  const timerRef=useRef(null);
+
+  const start=async()=>{
+    if(!cardRef.current)return;
+    try{
+      const stream=cardRef.current.captureStream(30);
+      mediaRec.current=new MediaRecorder(stream,{mimeType:"video/webm;codecs=vp9"});
+      chunks.current=[];
+      mediaRec.current.ondataavailable=e=>{if(e.data.size>0)chunks.current.push(e.data);};
+      mediaRec.current.onstop=()=>{
+        const blob=new Blob(chunks.current,{type:"video/webm"});
+        setVideoUrl(URL.createObjectURL(blob));
+        setStatus("done");
+        onAnimStart(false);
+      };
+      setStatus("countdown");setCountdown(3);
+      let c=3;
+      const cd=setInterval(()=>{c--;setCountdown(c);
+        if(c<=0){clearInterval(cd);
+          setStatus("recording");setProgress(0);
+          onAnimStart(true);
+          mediaRec.current.start();
+          const dur=duration*1000;let elapsed=0;
+          timerRef.current=setInterval(()=>{
+            elapsed+=100;setProgress(Math.min((elapsed/dur)*100,100));
+            if(elapsed>=dur){clearInterval(timerRef.current);mediaRec.current.stop();}
+          },100);
+        }
+      },1000);
+    }catch(err){alert("Kayıt desteklenmiyor: Chrome kullan.\n"+err.message);setStatus("idle");}
+  };
+
+  const stop=()=>{
+    if(timerRef.current)clearInterval(timerRef.current);
+    if(mediaRec.current?.state==="recording")mediaRec.current.stop();
+  };
+
+  const dl=()=>{if(!videoUrl)return;const a=document.createElement("a");a.href=videoUrl;a.download="mevzu-reels.webm";a.click();};
+
+  return(
+    <div style={{width:"100%",display:"flex",flexDirection:"column",gap:8}}>
+      {status==="recording"&&<div style={{height:3,background:"#282828",borderRadius:2,overflow:"hidden"}}>
+        <div style={{height:"100%",background:"#c9a84c",width:${progress}%,transition:"width 0.1s linear"}}/>
+      </div>}
+      <div style={{display:"flex",gap:8}}>
+        {status==="idle"&&<button onClick={start} style={{flex:1,background:"#c9a84c",color:"#1a1200",border:"none",borderRadius:10,padding:"13px 0",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,letterSpacing:2,textTransform:"uppercase",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Play size={14}/>Video Kaydet</button>}
+        {status==="countdown"&&<div style={{flex:1,background:"#1c1c1c",border:"1px solid #282828",borderRadius:10,padding:"13px 0",textAlign:"center",color:"#c9a84c",fontSize:24,fontWeight:700}}>{countdown}</div>}
+        {status==="recording"&&<button onClick={stop} style={{flex:1,background:"#ff4444",color:"#fff",border:"none",borderRadius:10,padding:"13px 0",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Square size={14}/>Durdur</button>}
+        {status==="done"&&<>
+          <button onClick={dl} style={{flex:2,background:"#c9a84c",color:"#1a1200",border:"none",borderRadius:10,padding:"13px 0",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Download size={14}/>İndir (.webm)</button>
+          <button onClick={()=>{setStatus("idle");setVideoUrl(null);setProgress(0);onAnimStart(false);}} style={{flex:1,background:"#1c1c1c",border:"1px solid #282828",color:"#555",borderRadius:10,padding:"13px 0",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Tekrar</button>
+        </>}
+      </div>
+      <div style={{fontSize:10,color:"#555",textAlign:"center"}}>
+        {status==="idle"&&" Chrome gerekli · Geri sayım başlar, animasyon otomatik oynar"}
+        {status==="countdown"&& Hazırlan... ${countdown}}
+        {status==="recording"&& Kaydediliyor — ${duration} saniye}
+        {status==="done"&&" Hazır! İndir ve Instagram'a yükle."}
+      </div>
+    </div>
+  );
+}
+
+// ============ ARKA PLAN PANELİ ============
+function BgPanel({s,setS}){
+  const fileRef=useRef(null);
+
+  const handleFile=e=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    const type=file.type.startsWith("video")?"video":"image";
+    setS(p=>({...p,bgType:"media",mediaUrl:url,mediaType:type}));
+  };
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {/* Tab: CSS / Medya */}
+      <div style={{display:"flex",gap:8}}>
+        {[["css","✦ CSS Efekt"],["media"," Fotoğraf / Video"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setS(p=>({...p,bgType:v}))} style={{
+            flex:1,background:s.bgType===v?"rgba(201,168,76,.08)":"#1c1c1c",
+            border:1px solid ${s.bgType===v?"#c9a84c":"#282828"},borderRadius:8,
+            color:s.bgType===v?"#c9a84c":"#555",fontSize:10,fontWeight:600,
+            padding:"10px 0",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+        ))}
+      </div>
+
+      {/* CSS efektleri */}
+      {s.bgType==="css"&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+          {CSS_BACKGROUNDS.map(bg=>(
+            <button key={bg.id} onClick={()=>setS(p=>({...p,cssBgId:bg.id,textColor:bg.textColor}))} style={{
+              background:s.cssBgId===bg.id?"rgba(201,168,76,.1)":"#1c1c1c",
+              border:1px solid ${s.cssBgId===bg.id?"#c9a84c":"#282828"},
+              borderRadius:8,padding:"10px 4px",cursor:"pointer",
+              color:s.cssBgId===bg.id?"#c9a84c":"#777",fontSize:11,fontFamily:"inherit",
+              textAlign:"center"}}>{bg.label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Medya yükleme */}
+      {s.bgType==="media"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <input ref={fileRef} type="file" accept="image/,video/" onChange={handleFile} style={{display:"none"}}/>
+          <button onClick={()=>fileRef.current?.click()} style={{
+            background:"#1c1c1c",border:"2px dashed #282828",borderRadius:10,
+            padding:"20px",cursor:"pointer",color:"#555",fontFamily:"inherit",
+            display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+            <Upload size={20} color="#555"/>
+            <span style={{fontSize:11}}>Fotoğraf veya Video Yükle</span>
+            <span style={{fontSize:9,color:"#444"}}>JPG, PNG, MP4, MOV desteklenir</span>
+          </button>
+          {s.mediaUrl&&(
+            <div style={{position:"relative",borderRadius:8,overflow:"hidden",height:80}}>
+              {s.mediaType==="video"
+                ?<video src={s.mediaUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} muted/>
+                :<img src={s.mediaUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+              <button onClick={()=>setS(p=>({...p,mediaUrl:null,mediaType:null}))}
+                style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.6)",border:"none",
+                  borderRadius:"50%",width:24,height:24,cursor:"pointer",color:"#fff",fontSize:14,
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Karartma */}
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <label style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#555"}}>
+          Karartma — %{Math.round(s.overlayOpacity*100)}
+        </label>
+        <input type="range" min={0} max={90} value={Math.round(s.overlayOpacity*100)}
+          onChange={e=>setS(p=>({...p,overlayOpacity:+e.target.value/100}))} style={{width:"100%"}}/>
+      </div>
+
+      {/* Metin rengi */}
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <label style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#555"}}>Metin Rengi</label>
+        <div style={{display:"flex",gap:8}}>
+          {["#ffffff","#f5e8d0","#c8dcf8","#ffd8d8","#c8f0d8","#1a1208","#0a1828","#100820"].map(c=>(
+            <button key={c} onClick={()=>setS(p=>({...p,textColor:c}))}
+              style={{width:32,height:32,borderRadius:6,background:c,border:2px solid ${s.textColor===c?"#c9a84c":"#282828"},cursor:"pointer",flexShrink:0,transform:s.textColor===c?"scale(1.15)":"scale(1)",transition:"transform .15s"}}/>
+          ))}
+          <input type="color" value={s.textColor} onChange={e=>setS(p=>({...p,textColor:e.target.value}))}
+            style={{width:32,height:32,borderRadius:6,border:"1px solid #282828",background:"#1c1c1c",cursor:"pointer",padding:2}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ İKON MODAL ============
+function IconModal({open,onClose,s,onSelect}){
+  const [tab,setTab]=useState("emoji");
+  const [cat,setCat]=useState("Gündem");
+  if(!open)return null;
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:200}}>
+      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(4px)"}}/>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#1a1a1a",borderRadius:"22px 22px 0 0",maxHeight:"82vh",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"14px 18px 10px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #282828"}}>
+          <span style={{fontSize:11,fontWeight:700,letterSpacing:4,color:"#c9a84c",textTransform:"uppercase"}}>Simge Seç</span>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#555",fontSize:24,cursor:"pointer"}}>×</button>
+        </div>
+        <div style={{display:"flex",padding:"10px 14px",gap:8,borderBottom:"1px solid #282828"}}>
+          {[["emoji"," Emoji"],["svg","✦ SVG"]].map(([v,l])=>(
+            <button key={v} onClick={()=>{setTab(v);setCat(Object.keys(v==="emoji"?EMOJI_CATS:ICON_CATS)[0]);}} style={{flex:1,background:tab===v?"rgba(201,168,76,.08)":"none",border:1px solid ${tab===v?"#c9a84c":"#282828"},borderRadius:8,color:tab===v?"#c9a84c":"#555",fontSize:11,fontWeight:600,padding:"9px 0",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",overflowX:"auto",padding:"8px 14px",gap:6,borderBottom:"1px solid #282828",scrollbarWidth:"none"}}>
+          {Object.keys(tab==="emoji"?EMOJI_CATS:ICON_CATS).map(c=>(
+            <button key={c} onClick={()=>setCat(c)} style={{background:c===cat?"rgba(201,168,76,.1)":"none",border:1px solid ${c===cat?"#c9a84c":"#282828"},borderRadius:20,color:c===cat?"#c9a84c":"#555",fontSize:10,letterSpacing:2,textTransform:"uppercase",padding:"6px 12px",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"inherit"}}>{c}</button>
+          ))}
+        </div>
+        <div style={{overflowY:"auto",padding:"12px 14px 36px"}}>
+          {tab==="emoji"?(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:8}}>
+              {(EMOJI_CATS[cat]||[]).map(em=>(
+                <button key={em} onClick={()=>{onSelect({iconMode:"emoji",emoji:em});onClose();}} style={{background:s.emoji===em&&s.iconMode==="emoji"?"rgba(201,168,76,.12)":"#1c1c1c",border:2px solid ${s.emoji===em&&s.iconMode==="emoji"?"#c9a84c":"#282828"},borderRadius:8,fontSize:20,height:44,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{em}</button>
+              ))}
+            </div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+              {(ICON_CATS[cat]||[]).map(({n,C:IC})=>(
+                <button key={n} onClick={()=>{onSelect({iconMode:"svg",svgIcon:n});onClose();}} style={{background:s.svgIcon===n&&s.iconMode==="svg"?"rgba(201,168,76,.12)":"#1c1c1c",border:2px solid ${s.svgIcon===n&&s.iconMode==="svg"?"#c9a84c":"#282828"},borderRadius:8,height:60,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,padding:4}}>
+                  <IC size={24} color={s.svgIcon===n&&s.iconMode==="svg"?"#c9a84c":"#555"} strokeWidth={1.5}/>
+                  <span style={{fontSize:7,color:"#444",letterSpacing:1,textTransform:"uppercase"}}>{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ REELS EDİTÖR SAYFASI ============
+function ReelsEditorPage({onBack}){
+  const [s,setS]=useState({...DEFAULT});
+  const [animated,setAnimated]=useState(false);
+  const [iconOpen,setIconOpen]=useState(false);
+  const cardRef=useRef(null);
+
+  const inp={background:"#1c1c1c",border:"1px solid #282828",borderRadius:8,color:"#f0f0f0",fontSize:13,padding:"10px 12px",outline:"none",width:"100%",fontFamily:"inherit"};
+  const F=({label,children})=>(
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <label style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#555"}}>{label}</label>
+      {children}
+    </div>
+  );
+
+  const bgDef=CSS_BACKGROUNDS.find(b=>b.id===s.cssBgId)||CSS_BACKGROUNDS[0];
+  const textCol=s.textColor||(bgDef.dark?"#e8f0ff":"#1a1a2a");
+
+  const IconPrev=()=>{
+    if(s.iconMode==="none")return <span style={{fontSize:18,color:"#555"}}>—</span>;
+    if(s.iconMode==="emoji")return <span style={{fontSize:22}}>{s.emoji}</span>;
+    const all=Object.values(ICON_CATS).flat();const f=all.find(i=>i.n===s.svgIcon);
+    if(!f)return null;const IC=f.C;return <IC size={22} color={s.iconColor||textCol} strokeWidth={1.5}/>;
+  };
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minHeight:"100vh",paddingBottom:60,background:"#141414"}}>
+      {/* Header */}
+      <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"#1c1c1c",borderBottom:"1px solid #282828",position:"sticky",top:0,zIndex:100}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:"#555",fontSize:22,cursor:"pointer"}}>←</button>
+        <span style={{fontSize:11,fontWeight:700,letterSpacing:4,textTransform:"uppercase",color:"#c9a84c"}}>Reels + Video</span>
+        <span style={{fontSize:9,color:"#555",textTransform:"uppercase",letterSpacing:2}}>9:16</span>
+      </div>
+
+      {/* Kart */}
+      <div style={{display:"flex",justifyContent:"center",padding:"20px 0 0",width:"100%"}}>
+        <ReelsCard s={{...s,textColor:textCol}} animated={animated} cardRef={cardRef}/>
+      </div>
+
+      {/* Önizle butonu */}
+      <div style={{maxWidth:340,width:"100%",padding:"12px 16px 0",display:"flex",gap:8}}>
+        <button onClick={()=>{setAnimated(false);setTimeout(()=>setAnimated(true),50);}}
+          style={{flex:1,background:"#1c1c1c",border:"1px solid #282828",borderRadius:10,padding:"11px 0",cursor:"pointer",color:"#c9a84c",fontFamily:"inherit",fontSize:11,fontWeight:600,letterSpacing:2,textTransform:"uppercase"}}>
+          ▷ Önizle
+        </button>
+      </div>
+
+      {/* Video kayıt */}
+      <div style={{maxWidth:340,width:"100%",padding:"8px 16px 0"}}>
+        <VideoRecorder cardRef={cardRef} duration={s.duration} onAnimStart={setAnimated}/>
+      </div>
+
+      {/* Panel */}
+      <div style={{maxWidth:520,width:"100%",padding:"20px 16px 0",display:"flex",flexDirection:"column",gap:14}}>
+
+        <F label="Arka Plan"><BgPanel s={s} setS={setS}/></F>
+
+        <F label="Söz">
+          <textarea value={s.quote} rows={3} onChange={e=>setS(p=>({...p,quote:e.target.value}))} style={{...inp,resize:"none"}}/>
+        </F>
+        <F label="Yazar"><input value={s.author} onChange={e=>setS(p=>({...p,author:e.target.value}))} style={inp}/></F>
+        <F label="Etiket (üst)"><input value={s.tag} onChange={e=>setS(p=>({...p,tag:e.target.value}))} style={inp}/></F>
+
+        <F label="Yazı Boyutu">
+          <div style={{display:"flex",gap:6}}>
+            {[[16,"XS"],[20,"S"],[26,"M"],[32,"L"],[38,"XL"]].map(([v,n])=>(
+              <button key={v} onClick={()=>setS(p=>({...p,fontSize:v}))} style={{flex:1,background:"#1c1c1c",border:1px solid ${s.fontSize===v?"#c9a84c":"#282828"},borderRadius:8,color:s.fontSize===v?"#c9a84c":"#555",fontSize:10,padding:"8px 2px",cursor:"pointer",fontFamily:"inherit"}}>{n}</button>
+            ))}
+          </div>
+        </F>
+
+        <F label={Video Süresi — ${s.duration}sn}>
+          <div style={{display:"flex",gap:6}}>
+            {[3,5,7,10,15].map(v=>(
+              <button key={v} onClick={()=>setS(p=>({...p,duration:v}))} style={{flex:1,background:"#1c1c1c",border:1px solid ${s.duration===v?"#c9a84c":"#282828"},borderRadius:8,color:s.duration===v?"#c9a84c":"#555",fontSize:10,padding:"8px 2px",cursor:"pointer",fontFamily:"inherit"}}>{v}s</button>
+            ))}
+          </div>
+        </F>
+
+      </div>
+      <IconModal open={iconOpen} onClose={()=>setIconOpen(false)} s={s} onSelect={sel=>setS(p=>({...p,...sel}))}/>
+    </div>
+  );
+}
+
+// ============ ANA SAYFA ============
+function HomePage({onOpen}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"100vh",gap:36,padding:"48px 24px",background:"radial-gradient(ellipse 70% 50% at 50% 10%,rgba(201,168,76,.07) 0%,transparent 65%),#141414"}}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:2}}>
+          <span style={{fontFamily:"Georgia,serif",fontSize:40,color:"#c9a84c",lineHeight:1}}>'</span>
+          <span style={{fontSize:48,fontWeight:700,color:"#c9a84c",lineHeight:1}}>#</span>
+        </div>
+        <span style={{fontSize:24,fontWeight:700,letterSpacing:7,color:"#c9a84c"}}>MEVZU</span>
+        <span style={{fontSize:9,letterSpacing:4,color:"#555",textTransform:"uppercase",marginTop:2}}>Günün Nabzına Söz</span>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",maxWidth:340}}>
+        {[
+          {k:"square",IC:Globe,t:"Kare Kart",d:"Twitter · Instagram Post",b:"1:1 · Statik"},
+          {k:"reels",IC:Smartphone,t:"Reels + Video",d:"Instagram Reels · TikTok",b:"9:16 · Animasyonlu"},
+        ].map(c=>(
+          <div key={c.k} onClick={()=>onOpen(c.k)}
+            style={{background:"#1c1c1c",border:"1px solid #282828",borderRadius:16,padding:"18px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,transition:"all .2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="#c9a84c";e.currentTarget.style.transform="translateY(-1px)"}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="#282828";e.currentTarget.style.transform="translateY(0)"}}>
+            <div style={{width:52,height:52,borderRadius:12,background:"rgba(201,168,76,.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <c.IC size={24} color="#c9a84c"/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <span style={{fontSize:15,fontWeight:600,color:"#f0f0f0"}}>{c.t}</span>
+              <span style={{fontSize:11,color:"#555"}}>{c.d}</span>
+              <span style={{fontSize:8,letterSpacing:2,textTransform:"uppercase",padding:"2px 8px",borderRadius:20,background:"rgba(201,168,76,.1)",color:"#c9a84c",marginTop:2,width:"fit-content"}}>{c.b}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:10,color:"#555",textAlign:"center",padding:"12px 18px",border:"1px dashed #282828",borderRadius:10,maxWidth:320,lineHeight:1.7}}>
+         Telefona yüklemek için<br/><strong style={{color:"#888"}}>"Ana Ekrana Ekle"</strong>
+      </div>
+    </div>
+  );
+}
+
+// Kare kart sayfası — önceki gibi
+function SquareEditorPage({onBack}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#141414",gap:20,padding:"24px"}}>
+      <button onClick={onBack} style={{background:"none",border:"none",color:"#555",fontSize:22,cursor:"pointer",alignSelf:"flex-start"}}>←</button>
+      <div style={{fontSize:12,color:"#555",textAlign:"center",letterSpacing:2}}>
+        Kare kart yakında burada — şimdi Reels'i dene!
+      </div>
+    </div>
+  );
+}
+
+export default function App(){
+  const [page,setPage]=useState("home");
+  return(
+    <div style={{fontFamily:"'DM Sans',sans-serif",color:"#f0f0f0",WebkitTapHighlightColor:"transparent"}}>
+      {page==="home"   &&<HomePage onOpen={setPage}/>}
+      {page==="square" &&<SquareEditorPage onBack={()=>setPage("home")}/>}
+      {page==="reels"  &&<ReelsEditorPage onBack={()=>setPage("home")}/>}
+    </div>
+  );
+}

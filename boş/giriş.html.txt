@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reels Arşivi</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'DM Sans', system-ui, sans-serif;
+    background: #141414; color: #f0f0f0; min-height: 100vh;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid #282828; position: sticky; top: 0;
+    background: #1c1c1c; z-index: 10;
+  }
+  .brand { font-size: 12px; font-weight: 700; letter-spacing: 4px; color: #c9a84c; text-transform: uppercase; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+  /* Auth gate */
+  #authGate { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 16px; }
+  #authGate input {
+    background: #1c1c1c; border: 1px solid #282828; border-radius: 8px; color: #f0f0f0;
+    padding: 12px 14px; font-size: 14px; width: 260px; outline: none;
+  }
+  #authGate button, .btn {
+    background: transparent; border: 1px solid #c9a84c; border-radius: 8px; color: #c9a84c;
+    font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    padding: 11px 20px; cursor: pointer; font-family: inherit;
+  }
+  #authGate button:hover, .btn:hover { background: rgba(201,168,76,.08); }
+  #authError { color: #ff8080; font-size: 12px; min-height: 16px; }
+
+  /* Upload panel */
+  .panel { background: #1c1c1c; border: 1px solid #282828; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+  .panel label { display: block; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #555; margin-bottom: 6px; }
+  .panel input[type=text], .panel select {
+    width: 100%; background: #141414; border: 1px solid #282828; border-radius: 8px; color: #f0f0f0;
+    padding: 10px 12px; font-size: 13px; margin-bottom: 14px; outline: none; font-family: inherit;
+  }
+  .panel input[type=file] { margin-bottom: 14px; color: #888; font-size: 12px; }
+  #progressWrap { display: none; height: 4px; background: #282828; border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+  #progressBar { height: 100%; width: 0%; background: #c9a84c; transition: width .2s; }
+  #uploadStatus { font-size: 11px; color: #777; }
+
+  /* Filter tabs */
+  .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
+  .tab {
+    background: none; border: 1px solid #282828; border-radius: 20px; color: #555;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 7px 14px;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit;
+  }
+  .tab.active { border-color: #c9a84c; color: #c9a84c; background: rgba(201,168,76,.08); }
+
+  /* Video grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .card { background: #1c1c1c; border: 1px solid #282828; border-radius: 12px; overflow: hidden; }
+  .card video { width: 100%; display: block; background: #000; aspect-ratio: 9/16; object-fit: cover; }
+  .card-body { padding: 12px 14px; }
+  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .card-cat { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #c9a84c; }
+  .card-notes { font-size: 11px; color: #777; margin-top: 6px; line-height: 1.5; }
+  .empty { text-align: center; color: #555; font-size: 12px; padding: 60px 0; }
+</style>
+</head>
+<body>
+
+<div id="authGate">
+  <span class="brand">✦ Reels Arşivi — Giriş</span>
+  <input type="email" id="email" placeholder="E-posta">
+  <input type="password" id="password" placeholder="Şifre">
+  <button onclick="login()">Giriş Yap</button>
+  <div id="authError"></div>
+</div>
+
+<div id="appShell" style="display:none;">
+  <div class="topbar">
+    <span class="brand">✦ Reels Arşivi</span>
+    <button class="btn" onclick="logout()">Çıkış</button>
+  </div>
+  <div class="container">
+
+    <div class="panel">
+      <label>Başlık</label>
+      <input type="text" id="title" placeholder="Enflasyon açıklama videosu">
+      <label>Kategori</label>
+      <select id="category">
+        <option>Gündem</option><option>Ekonomi</option><option>Spor</option><option>Doğa</option>
+        <option>İnsan</option><option>Sanat</option><option>Teknoloji</option><option>Sembol</option>
+      </select>
+      <label>Not (opsiyonel)</label>
+      <input type="text" id="notes" placeholder="Kısa açıklama...">
+      <label>Video Dosyası (mp4)</label>
+      <input type="file" id="file" accept="video/*">
+      <div id="progressWrap"><div id="progressBar"></div></div>
+      <div id="uploadStatus"></div>
+      <button class="btn" onclick="uploadVideo()">Yükle</button>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="grid" id="grid"><div class="empty">Yükleniyor...</div></div>
+
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytesResumable, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+// ⚠️ CRM / Fon Takip'te kullandığın firebaseConfig ile AYNI değerleri buraya koy
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+const CATS = ["Gündem","Ekonomi","Spor","Doğa","İnsan","Sanat","Teknoloji","Sembol"];
+let activeCat = "Tümü";
+let allVideos = [];
+
+window.login = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  document.getElementById("authError").textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    document.getElementById("authError").textContent = "Giriş başarısız: " + e.message;
+  }
+};
+
+window.logout = function () { signOut(auth); };
+
+onAuthStateChanged(auth, (user) => {
+  document.getElementById("authGate").style.display = user ? "none" : "flex";
+  document.getElementById("appShell").style.display = user ? "block" : "none";
+  if (user) initTabs(), listenVideos();
+});
+
+function initTabs() {
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = "";
+  ["Tümü", ...CATS].forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (cat === activeCat ? " active" : "");
+    btn.textContent = cat;
+    btn.onclick = () => { activeCat = cat; initTabs(); renderGrid(); };
+    tabsEl.appendChild(btn);
+  });
+}
+
+function listenVideos() {
+  const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    allVideos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderGrid();
+  });
+}
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  const filtered = activeCat === "Tümü" ? allVideos : allVideos.filter(v => v.category === activeCat);
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty">Bu kategoride henüz video yok</div>';
+    return;
+  }
+  grid.innerHTML = "";
+  filtered.forEach(v => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <video src="${v.url}" controls preload="metadata"></video>
+      <div class="card-body">
+        <div class="card-title">${v.title || "(başlıksız)"}</div>
+        <div class="card-cat">${v.category}</div>
+        ${v.notes ? `<div class="card-notes">${v.notes}</div>` : ""}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+window.uploadVideo = async function () {
+  const fileInput = document.getElementById("file");
+  const file = fileInput.files[0];
+  const title = document.getElementById("title").value.trim();
+  const category = document.getElementById("category").value;
+  const notes = document.getElementById("notes").value.trim();
+  const statusEl = document.getElementById("uploadStatus");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar = document.getElementById("progressBar");
+
+  if (!file) { statusEl.textContent = "Önce bir video dosyası seç."; return; }
+
+  const safeName = Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const storagePath = `reels/${category}/${safeName}`;
+  const storageRef = ref(storage, storagePath);
+  const task = uploadBytesResumable(storageRef, file);
+
+  progressWrap.style.display = "block";
+  statusEl.textContent = "Yükleniyor...";
+
+  task.on("state_changed",
+    (snap) => {
+      const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+      progressBar.style.width = pct + "%";
+      statusEl.textContent = `Yükleniyor... %${pct}`;
+    },
+    (err) => { statusEl.textContent = "Hata: " + err.message; },
+    async () => {
+      const url = await getDownloadURL(task.snapshot.ref);
+      await addDoc(collection(db, "videos"), {
+        title, category, notes, storagePath, url, createdAt: serverTimestamp()
+      });
+      statusEl.textContent = "Yüklendi ✓";
+      progressWrap.style.display = "none";
+      progressBar.style.width = "0%";
+      document.getElementById("title").value = "";
+      document.getElementById("notes").value = "";
+      fileInput.value = "";
+    }
+  );
+};
+</script>
+</body>
+</html>

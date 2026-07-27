@@ -1,0 +1,26 @@
+export const TEMALAR = {
+  dark: {
+    bg:      "#141414",
+    bg2:     "#1c1c1c",
+    bg3:     "#242424",
+    border:  "#282828",
+    text:    "#f0f0f0",
+    muted:   "#888",
+    faint:   "#555",
+    fainter: "#444",
+    gold:    "#c9a84c",
+    gr:      "201,168,76",
+  },
+  light: {
+    bg:      "#f5f2eb",
+    bg2:     "#ffffff",
+    bg3:     "#edeae2",
+    border:  "#e0dbd0",
+    text:    "#1a1a1a",
+    muted:   "#777",
+    faint:   "#999",
+    fainter: "#bbb",
+    gold:    "#b8913c",
+    gr:      "184,145,60",
+  },
+};
