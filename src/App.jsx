@@ -3,6 +3,7 @@ import Login from "./components/Login";
 import HomePage from "./components/HomePage";
 import EditorPage from "./components/EditorPage";
 import ReelsPage from "./components/ReelsPage";
+import SurprizPage from "./components/SurprizPage";
 import ProfilePage from "./components/ProfilePage";
 import PostlarPage from "./components/PostlarPage";
 
@@ -41,6 +42,7 @@ export default function App() {
       {page === "home"    && <HomePage    tema={tema} onToggleTema={toggleTema} onOpen={setPage} onCikis={handleCikis} />}
       {page === "square"  && <EditorPage  tema={tema} onBack={() => setPage("home")} />}
       {page === "reels"   && <ReelsPage   tema={tema} onBack={() => setPage("home")} />}
+      {page === "surpriz" && <SurprizPage tema={tema} onBack={() => setPage("home")} />}
       {page === "profil"  && <ProfilePage tema={tema} onBack={() => setPage("home")} />}
       {page === "postlar" && <PostlarPage tema={tema} onBack={() => setPage("home")} />}
     </div>

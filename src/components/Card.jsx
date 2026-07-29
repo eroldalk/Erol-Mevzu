@@ -482,7 +482,9 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
         <Noise />
         <AnimatedBg s={s} />
 
-        <DragBox drag={id} style={{ bottom:80,right:10,zIndex:2 }}>
+        {/* zIndex, söz/yazar kutularından (5) yüksek: uzun sözlerde metin kutusu ikonun üzerine taşıp
+            tıklamayı yakalamasın diye ikon her zaman sürüklenebilir kalsın */}
+        <DragBox drag={id} style={{ bottom:80,right:10,zIndex:6 }}>
           <CardIcon s={s} />
         </DragBox>
 

@@ -1,4 +1,4 @@
-import { Globe, Smartphone, Images, LogOut, Sun, Moon } from "lucide-react";
+import { Globe, Smartphone, Shuffle, Images, LogOut, Sun, Moon } from "lucide-react";
 import { TEMALAR } from "../utils/tema";
 import { useIsDesktop } from "../utils/hooks";
 
@@ -14,6 +14,7 @@ export default function HomePage({ tema, onToggleTema, onOpen, onCikis }) {
   const CARDS = [
     { k: "square", IC: Globe,      t: "Kare Kart",  d: "Twitter · Instagram Post",  b: "1:1 · 1080×1080"  },
     { k: "reels",  IC: Smartphone, t: "Reels Kart", d: "Instagram Reels · TikTok",  b: "9:16 · 1080×1920" },
+    { k: "surpriz", IC: Shuffle,   t: "Sürpriz Kart", d: "Otomatik Rastgele Söz",   b: "1:1 · Anında"     },
   ];
 
   /* ── Desktop ─────────────────────────────────────────────────── */
@@ -99,7 +100,7 @@ export default function HomePage({ tema, onToggleTema, onOpen, onCikis }) {
             <p style={{ fontSize: 13, color: T.faint, margin: "10px 0 0", letterSpacing: 1 }}>Format seç ve oluşturmaya başla</p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, width: "100%", maxWidth: 720 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24, width: "100%", maxWidth: 900 }}>
             {CARDS.map((c) => (
               <div
                 key={c.k}
