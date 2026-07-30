@@ -251,34 +251,58 @@ export const QUOTE_BANK = [
   { quote: "İktidar yozlaştırır,\nmutlak iktidar mutlaka yozlaştırır.", author: "Lord Acton", cat: "Gündem" },
   { quote: "Adalet gecikirse,\nadalet inkar edilmiş olur.", author: "William E. Gladstone", cat: "Gündem" },
   { quote: "Sessiz kalmak da\nbir tercihtir.", author: "Anonim", cat: "Gündem" },
+  { quote: "Bilgi güçtür,\npaylaşılan bilgi daha da güçlüdür.", author: "Anonim", cat: "Gündem" },
+  { quote: "Basın özgürlüğü olmayan yerde,\ngerçek de özgür değildir.", author: "Anonim", cat: "Gündem" },
+  { quote: "Halkın, halk tarafından,\nhalk için yönetimi.", author: "Abraham Lincoln", cat: "Gündem" },
 
   { quote: "Zaman paradır,\nboşa harcama.", author: "Benjamin Franklin", cat: "Ekonomi" },
   { quote: "Para iyi bir hizmetçi,\nkötü bir efendidir.", author: "Francis Bacon", cat: "Ekonomi" },
   { quote: "Tasarruf, gelecek\niçin bugünden vazgeçmektir.", author: "Anonim", cat: "Ekonomi" },
+  { quote: "Küçük harcamalara dikkat et;\nküçük bir delik büyük gemiyi batırır.", author: "Benjamin Franklin", cat: "Ekonomi" },
+  { quote: "En iyi yatırım,\nkendine yaptığın yatırımdır.", author: "Warren Buffett", cat: "Ekonomi" },
+  { quote: "Borç, özgürlüğün\nen sinsi düşmanıdır.", author: "Anonim", cat: "Ekonomi" },
 
   { quote: "Şampiyonlar salonlarda değil,\niçlerindeki bir şeyden doğar.", author: "Muhammad Ali", cat: "Spor" },
   { quote: "Kazanmak her şey değil,\nkazanma isteği her şeydir.", author: "Vince Lombardi", cat: "Spor" },
   { quote: "Disiplin, hedef ile\nbaşarı arasındaki köprüdür.", author: "Jim Rohn", cat: "Spor" },
+  { quote: "Vücudun senden önce\npes etmez, zihnin eder.", author: "Anonim", cat: "Spor" },
+  { quote: "Antrenmanda döktüğün ter,\nmaçta akıtmayacağın gözyaşıdır.", author: "Anonim", cat: "Spor" },
+  { quote: "Spor, karakter\ninşa etmenin en iyi yoludur.", author: "Anonim", cat: "Spor" },
 
   { quote: "Doğada hiçbir şey\nboşuna değildir.", author: "Aristoteles", cat: "Doğa" },
   { quote: "Dünya herkesin ihtiyacına yeter,\nama açgözlülüğüne yetmez.", author: "Mahatma Gandhi", cat: "Doğa" },
   { quote: "Her yürüyüş doğada,\naradığından fazlasını verir.", author: "John Muir", cat: "Doğa" },
+  { quote: "Ağaç dikmenin en iyi zamanı\n20 yıl önceydi, ikincisi şimdi.", author: "Çin Atasözü", cat: "Doğa" },
+  { quote: "Yeryüzü, atalarımızdan miras değil,\nçocuklarımızdan ödünç aldığımızdır.", author: "Anonim", cat: "Doğa" },
+  { quote: "Bir çiçeğin açması için,\ntoprağın önce çürümesi gerekir.", author: "Anonim", cat: "Doğa" },
 
   { quote: "Kendini tanımak,\ntüm bilgeliğin başlangıcıdır.", author: "Aristoteles", cat: "İnsan" },
   { quote: "Sevgi, karşılık beklemeden\nvermektir.", author: "Anonim", cat: "İnsan" },
   { quote: "İnsan, tekrar ettiği\nalışkanlıkların toplamıdır.", author: "Aristoteles", cat: "İnsan" },
+  { quote: "Bilge kişi, çok konuşan değil,\ndoğru dinleyendir.", author: "Anonim", cat: "İnsan" },
+  { quote: "Karakter, kimse bakmazken\nyaptığın şeydir.", author: "Anonim", cat: "İnsan" },
+  { quote: "Empati, başkasının ayakkabısıyla\nbir mil yürüyebilmektir.", author: "Anonim", cat: "İnsan" },
 
   { quote: "Sanat, görünmeyeni\ngörünür kılar.", author: "Paul Klee", cat: "Sanat" },
   { quote: "Yaratıcılık, zekanın\neğlenerek çalışmasıdır.", author: "Albert Einstein", cat: "Sanat" },
   { quote: "Müzik, sözlerin\nbittiği yerde başlar.", author: "Heinrich Heine", cat: "Sanat" },
+  { quote: "Her çocuk bir sanatçıdır;\nsorun büyüyünce sanatçı kalabilmek.", author: "Pablo Picasso", cat: "Sanat" },
+  { quote: "Sanat, ruhun\ngünlük tozunu temizler.", author: "Pablo Picasso", cat: "Sanat" },
+  { quote: "Yazmak, sessizce\nbağırmaktır.", author: "Anonim", cat: "Sanat" },
 
   { quote: "Gelişmiş her teknoloji,\nbüyüden ayırt edilemez.", author: "Arthur C. Clarke", cat: "Teknoloji" },
   { quote: "Basitlik, karmaşıklığın\nen üst düzeyidir.", author: "Leonardo da Vinci", cat: "Teknoloji" },
   { quote: "Geleceği tahmin etmenin\nen iyi yolu, onu inşa etmektir.", author: "Alan Kay", cat: "Teknoloji" },
+  { quote: "Bilgisayarlar yararsızdır,\nsadece cevap verebilirler.", author: "Pablo Picasso", cat: "Teknoloji" },
+  { quote: "Değişmeyen tek şey,\ndeğişimin kendisidir.", author: "Herakleitos", cat: "Teknoloji" },
+  { quote: "İyi tasarım, mümkün olduğunca\naz tasarımdır.", author: "Dieter Rams", cat: "Teknoloji" },
 
   { quote: "Her son,\nyeni bir başlangıçtır.", author: "Anonim", cat: "Sembol" },
   { quote: "Işık, en çok karanlıkta\nanlam kazanır.", author: "Anonim", cat: "Sembol" },
   { quote: "Zaman herkese eşit akar,\nherkes eşit kullanmaz.", author: "Anonim", cat: "Sembol" },
+  { quote: "Sabır, acının\ntatlı meyvesidir.", author: "Jean-Jacques Rousseau", cat: "Sembol" },
+  { quote: "Her şey bir sebeple olur,\nama sebep her zaman görünmez.", author: "Anonim", cat: "Sembol" },
+  { quote: "Bin kilometrelik yolculuk,\ntek bir adımla başlar.", author: "Lao Tzu", cat: "Sembol" },
 ];
 
 export const DEFAULT = {
