@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DEFAULT, COLORS, ICON_CATS, EMOJI_CATS, FONT_PRESETS } from "../utils/constants";
 import { TEMALAR } from "../utils/tema";
-import { getRandomQuote } from "../utils/quotes";
+import { getRandomQuote, getQuoteHistory } from "../utils/quotes";
 import Card from "./Card";
 
 const LAYOUTS = ["a", "b", "c"];
@@ -40,6 +40,8 @@ export default function SurprizPage({ tema, onBack }) {
   const [s, setS] = useState(null);
   const [kalan, setKalan] = useState(null);
   const [toplam, setToplam] = useState(null);
+  const [gecmisAcik, setGecmisAcik] = useState(false);
+  const [gecmis, setGecmis] = useState([]);
   const cardRef = useRef(null);
 
   const karistir = async () => {
@@ -48,6 +50,12 @@ export default function SurprizPage({ tema, onBack }) {
     setS(buildState(q));
     setKalan(q.poolRemaining);
     setToplam(q.poolTotal);
+    if (gecmisAcik) setGecmis(getQuoteHistory());
+  };
+
+  const gecmisiAcKapat = () => {
+    if (!gecmisAcik) setGecmis(getQuoteHistory());
+    setGecmisAcik((v) => !v);
   };
 
   useEffect(() => { karistir(); }, []);
@@ -127,6 +135,46 @@ export default function SurprizPage({ tema, onBack }) {
             border: "none", borderRadius: 10, padding: "13px 0", cursor: s ? "pointer" : "not-allowed",
             fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
           }}>⬇ İndir</button>
+        </div>
+
+        <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={gecmisiAcKapat} style={{
+            background: "none", border: "none", cursor: "pointer", color: T.faint, fontFamily: "inherit",
+            fontSize: 10, letterSpacing: 2, textTransform: "uppercase", padding: "4px 0",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            📜 Geçmiş Sözler {gecmisAcik ? "▲" : "▼"}
+          </button>
+
+          {gecmisAcik && (
+            <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+              {gecmis.length === 0 ? (
+                <div style={{ padding: "18px 14px", textAlign: "center", fontSize: 10, color: T.faint, letterSpacing: 1 }}>
+                  Henüz geçmiş yok
+                </div>
+              ) : (
+                <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                  {gecmis.map((g, i) => (
+                    <div key={`${g.id}-${g.date}-${i}`} style={{
+                      padding: "10px 14px",
+                      borderBottom: i < gecmis.length - 1 ? `1px solid ${T.border}` : "none",
+                      display: "flex", flexDirection: "column", gap: 3,
+                    }}>
+                      <span style={{ fontSize: 11, color: T.text, fontStyle: "italic" }}>
+                        {g.quote.split("\n")[0]}
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 9, color: T.faint, letterSpacing: 1 }}>{g.author}</span>
+                        <span style={{ fontSize: 8, color: T.fainter, letterSpacing: 1 }}>
+                          {new Date(g.date).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -247,6 +247,19 @@ export const MUSIC_LIBRARY = [
 
 ];
 
+
+export const DEFAULT = {
+  layout:"b", color:COLORS[0],
+  iconMode:"emoji", emoji:"🏫", svgIcon:"Scale",
+  iconSize:150, iconColor:"", iconOpacity:0.14, iconHidden:false,
+  quote:"Bir çocuğu koruyamayanlar,\ngeleceği koruyamaz.",
+  author:"Nelson Mandela", fontSize:28, tag:"Günün Sözü", cat:"",
+  bgAnim:"none", textAnim:"none",
+  fontStyle:"serif-italic",
+  textGradient:{ enabled:false, from:"#c9a84c", to:"#f5e8d0" },
+  textShadow:{ enabled:false, intensity:40 },
+};
+
 export const QUOTE_BANK = [
   { quote: "İktidar yozlaştırır,\nmutlak iktidar mutlaka yozlaştırır.", author: "Lord Acton", cat: "Gündem" },
   { quote: "Adalet gecikirse,\nadalet inkar edilmiş olur.", author: "William E. Gladstone", cat: "Gündem" },
@@ -305,14 +318,3 @@ export const QUOTE_BANK = [
   { quote: "Bin kilometrelik yolculuk,\ntek bir adımla başlar.", author: "Lao Tzu", cat: "Sembol" },
 ];
 
-export const DEFAULT = {
-  layout:"b", color:COLORS[0],
-  iconMode:"emoji", emoji:"🏫", svgIcon:"Scale",
-  iconSize:150, iconColor:"", iconOpacity:0.14, iconHidden:false,
-  quote:"Bir çocuğu koruyamayanlar,\ngeleceği koruyamaz.",
-  author:"Nelson Mandela", fontSize:28, tag:"Günün Sözü", cat:"",
-  bgAnim:"none", textAnim:"none",
-  fontStyle:"serif-italic",
-  textGradient:{ enabled:false, from:"#c9a84c", to:"#f5e8d0" },
-  textShadow:{ enabled:false, intensity:40 },
-};
