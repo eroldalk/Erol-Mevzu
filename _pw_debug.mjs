@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch({ args: ["--no-sandbox"] });
+const page = await browser.newPage();
+await page.goto("http://localhost:5174/Erol-Mevzu/", { waitUntil: "networkidle" });
+await page.locator('input[autocomplete="username"]').fill("mevzu");
+await page.locator('input[autocomplete="current-password"]').fill("123456");
+await page.locator('button[type="submit"]').click();
+await page.waitForSelector("text=Sürpriz Kart", { timeout: 15000 });
+await page.locator("text=Sürpriz Kart").first().click();
+await page.waitForTimeout(2000);
+const t = await page.locator("body").innerText();
+console.log(JSON.stringify(t));
+await browser.close();

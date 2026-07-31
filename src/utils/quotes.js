@@ -2,7 +2,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import { QUOTE_BANK } from "./constants";
 
-const SHOWN_KEY = "mevzu_shown_quotes";
+const USED_KEY = "mevzu_used_quotes";
 const HISTORY_KEY = "mevzu_quote_history";
 const HISTORY_LIMIT = 200;
 
@@ -26,18 +26,20 @@ async function loadPool() {
   return poolPromise;
 }
 
-function getShown() {
-  try { return JSON.parse(localStorage.getItem(SHOWN_KEY) || "[]"); } catch { return []; }
+function getUsed() {
+  try { return JSON.parse(localStorage.getItem(USED_KEY) || "[]"); } catch { return []; }
 }
 
-function markShown(id, poolSize) {
-  const shown = getShown();
-  const next = shown.includes(id) ? shown : [...shown, id];
-  // Havuzun tamamı gösterildiyse listeyi sıfırla, döngü baştan başlasın.
-  localStorage.setItem(SHOWN_KEY, JSON.stringify(next.length >= poolSize ? [] : next));
+// Sayfayı açmak / "Yeniden Karıştır" bir sözü tüketmez — sadece görüntüler.
+// Bir söz yalnızca gerçekten indirildiğinde (markQuoteUsed) havuzdan düşer.
+export function markQuoteUsed(quote) {
+  const used = getUsed();
+  const next = used.includes(quote.id) ? used : [...used, quote.id];
+  const poolSize = quote.poolTotal || next.length;
+  // Havuzun tamamı indirildiyse listeyi sıfırla, yeni bir tur başlasın.
+  localStorage.setItem(USED_KEY, JSON.stringify(next.length >= poolSize ? [] : next));
 }
 
-// Turlar sıfırlansa bile hiç silinmeyen, kalıcı "daha önce çıkan sözler" kaydı.
 function addToHistory(quote) {
   try {
     const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
@@ -53,12 +55,10 @@ export function getQuoteHistory() {
 
 export async function getRandomQuote() {
   const pool = await loadPool();
-  const shown = getShown();
-  const available = pool.filter((q) => !shown.includes(q.id));
-  // Havuzun tamamı gösterildiyse bu turda yeni bir döngü başlar.
-  const turHavuzu = available.length > 0 ? available : pool;
-  const chosen = turHavuzu[Math.floor(Math.random() * turHavuzu.length)];
-  markShown(chosen.id, pool.length);
+  const used = getUsed();
+  const available = pool.filter((q) => !used.includes(q.id));
+  const source = available.length > 0 ? available : pool;
+  const chosen = source[Math.floor(Math.random() * source.length)];
   addToHistory(chosen);
-  return { ...chosen, poolTotal: pool.length, poolRemaining: turHavuzu.length - 1 };
+  return { ...chosen, poolTotal: pool.length, poolRemaining: available.length };
 }

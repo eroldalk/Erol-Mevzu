@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DEFAULT, COLORS, ICON_CATS, EMOJI_CATS, FONT_PRESETS } from "../utils/constants";
 import { TEMALAR } from "../utils/tema";
-import { getRandomQuote, getQuoteHistory } from "../utils/quotes";
+import { getRandomQuote, getQuoteHistory, markQuoteUsed } from "../utils/quotes";
 import Card from "./Card";
 
 const LAYOUTS = ["a", "b", "c"];
@@ -38,6 +38,7 @@ function buildState(q) {
 export default function SurprizPage({ tema, onBack }) {
   const T = TEMALAR[tema];
   const [s, setS] = useState(null);
+  const [currentQuote, setCurrentQuote] = useState(null);
   const [kalan, setKalan] = useState(null);
   const [toplam, setToplam] = useState(null);
   const [gecmisAcik, setGecmisAcik] = useState(false);
@@ -47,6 +48,7 @@ export default function SurprizPage({ tema, onBack }) {
   const karistir = async () => {
     setS(null);
     const q = await getRandomQuote();
+    setCurrentQuote(q);
     setS(buildState(q));
     setKalan(q.poolRemaining);
     setToplam(q.poolTotal);
@@ -89,6 +91,11 @@ export default function SurprizPage({ tema, onBack }) {
     link.download = `mevzu-surpriz-${Date.now()}.png`;
     link.href = fullImg;
     link.click();
+
+    if (currentQuote) {
+      markQuoteUsed(currentQuote);
+      setKalan((k) => (k !== null ? Math.max(0, k - 1) : k));
+    }
   };
 
   return (
