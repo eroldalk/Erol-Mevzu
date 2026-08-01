@@ -260,6 +260,25 @@ export const DEFAULT = {
   textShadow:{ enabled:false, intensity:40 },
 };
 
+// Söz kategorisine göre uygun müzik türü — otomatik video modunda ritme "gerçek" beat-analizi
+// yapmak yerine (mp3'lerde BPM etiketi yok, tarayıcıda güvenilir değil) sözün havasına yakın
+// bir tür seçip parçanın rastgele bir 10sn'lik bölümünü kullanıyoruz.
+export const CAT_MUSIC_GENRE = {
+  "Gündem": ["Kurumsal", "Dramatik"],
+  "Ekonomi": ["Kurumsal", "Ambient"],
+  "Spor": ["EDM", "Elektronik", "Hip Hop"],
+  "Doğa": ["Ambient", "Akustik", "Chillout"],
+  "İnsan": ["Piyano", "Akustik", "Folk Pop"],
+  "Sanat": ["Jazz", "Akustik", "Piyano"],
+  "Teknoloji": ["Elektronik", "EDM"],
+  "Sembol": ["Ambient", "Piyano"],
+  "Felsefe": ["Ambient", "Piyano", "Dramatik"],
+  "Güç & Strateji": ["Dramatik", "Perküsyon", "Film Müziği"],
+  "Motivasyon": ["Pop", "EDM", "Film Müziği"],
+  "Psikoloji": ["Ambient", "Chillout", "Piyano"],
+  "Zaman & Hayat": ["Piyano", "Akustik", "Ambiyans"],
+};
+
 export const QUOTE_BANK = [
   { quote: "İktidar yozlaştırır,\nmutlak iktidar mutlaka yozlaştırır.", author: "Lord Acton", cat: "Gündem" },
   { quote: "Adalet gecikirse,\nadalet inkar edilmiş olur.", author: "William E. Gladstone", cat: "Gündem" },

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { DEFAULT, COLORS, ICON_CATS, EMOJI_CATS, FONT_PRESETS } from "../utils/constants";
+import { DEFAULT, COLORS, ICON_CATS, EMOJI_CATS, FONT_PRESETS, MUSIC_LIBRARY, CAT_MUSIC_GENRE } from "../utils/constants";
 import { TEMALAR } from "../utils/tema";
 import { getRandomQuote, getQuoteHistory, markQuoteUsed } from "../utils/quotes";
+import { BG_RENDERERS, renderAutoQuoteFrame } from "../utils/videoRender";
 import Card from "./Card";
 
 const LAYOUTS = ["a", "b", "c"];
@@ -44,7 +45,12 @@ export default function SurprizPage({ tema, onBack }) {
   const [gecmisAcik, setGecmisAcik] = useState(false);
   const [gecmis, setGecmis] = useState([]);
   const [boyut, setBoyut] = useState("kare");
+  const [videoStatus, setVideoStatus] = useState("idle");
+  const [videoCountdown, setVideoCountdown] = useState(3);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoUrl, setVideoUrl] = useState(null);
   const cardRef = useRef(null);
+  const videoRafRef = useRef(null);
   const portrait = boyut === "story";
 
   const karistir = async () => {
@@ -99,6 +105,120 @@ export default function SurprizPage({ tema, onBack }) {
       setKalan((k) => (k !== null ? Math.max(0, k - 1) : k));
       if (gecmisAcik) setGecmis(getQuoteHistory());
     }
+  };
+
+  // Sözün kategorisine uygun tür(ler)den rastgele bir parça seçer — havuzda eşleşme
+  // yoksa tüm kütüphaneden seçer.
+  const pickMusicTrack = (cat) => {
+    const genres = CAT_MUSIC_GENRE[cat];
+    const pool = genres ? MUSIC_LIBRARY.filter((m) => genres.includes(m.genre)) : MUSIC_LIBRARY;
+    return rand(pool.length ? pool : MUSIC_LIBRARY);
+  };
+
+  const videoSifirla = () => { setVideoStatus("idle"); setVideoUrl(null); setVideoProgress(0); };
+
+  const videoOlustur = async () => {
+    setVideoUrl(null);
+    const q = await getRandomQuote();
+    const state = buildState(q);
+    const track = pickMusicTrack(q.cat);
+
+    const cv = document.createElement("canvas");
+    cv.width = 320; cv.height = portrait ? 568 : 320;
+    const cx = cv.getContext("2d");
+
+    // Parçanın rastgele bir 10sn'lik bölümünü kullan — baştan başlaması şart değil
+    const audioEl = document.createElement("audio");
+    audioEl.crossOrigin = "anonymous";
+    audioEl.src = track.url;
+    let startOffset = 0;
+    try {
+      await new Promise((resolve, reject) => {
+        audioEl.addEventListener("loadedmetadata", resolve, { once: true });
+        audioEl.addEventListener("error", reject, { once: true });
+        setTimeout(reject, 6000);
+      });
+      if (isFinite(audioEl.duration) && audioEl.duration > 13) {
+        startOffset = 3 + Math.random() * (audioEl.duration - 13);
+      }
+    } catch { /* metadata alınamazsa parça baştan çalınır */ }
+
+    setVideoStatus("countdown"); setVideoCountdown(3);
+    await new Promise((resolve) => {
+      let c = 3;
+      const cd = setInterval(() => {
+        c--; setVideoCountdown(c);
+        if (c <= 0) { clearInterval(cd); resolve(); }
+      }, 1000);
+    });
+
+    try {
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+      const canvasStream = cv.captureStream(30);
+      let finalStream = canvasStream;
+      try {
+        audioEl.currentTime = startOffset;
+        const audioCtx = new AudioContext();
+        const src = audioCtx.createMediaElementSource(audioEl);
+        const dest = audioCtx.createMediaStreamDestination();
+        src.connect(dest);
+        finalStream = new MediaStream([...canvasStream.getTracks(), ...dest.stream.getTracks()]);
+      } catch { /* ses eklenemezse sessiz video */ }
+
+      const rec = new MediaRecorder(finalStream, { mimeType });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      const stopped = new Promise((resolve) => {
+        rec.onstop = () => {
+          cancelAnimationFrame(videoRafRef.current);
+          audioEl.pause();
+          resolve(new Blob(chunks, { type: "video/webm" }));
+        };
+      });
+
+      setVideoStatus("recording"); setVideoProgress(0);
+      rec.start();
+      audioEl.play().catch(() => {});
+      const DURATION = 10000;
+      let rafStart = null;
+      const bgRender = BG_RENDERERS[state.bgAnim || "none"] || BG_RENDERERS.none;
+      const loop = (ts) => {
+        if (!rafStart) rafStart = ts;
+        const e = ts - rafStart;
+        bgRender(cv, cx, state, e);
+        renderAutoQuoteFrame(cv, cx, state, e);
+        setVideoProgress(Math.min((e / DURATION) * 100, 100));
+        if (e >= DURATION) { rec.stop(); return; }
+        videoRafRef.current = requestAnimationFrame(loop);
+      };
+      videoRafRef.current = requestAnimationFrame(loop);
+
+      const blob = await stopped;
+      setVideoUrl(URL.createObjectURL(blob));
+      setVideoStatus("done");
+
+      try {
+        const thumbCv = document.createElement("canvas");
+        thumbCv.width = 300; thumbCv.height = 300;
+        thumbCv.getContext("2d").drawImage(cv, 0, 0, 300, 300);
+        const thumbImg = thumbCv.toDataURL("image/jpeg", 0.7);
+        const mevcutlar = JSON.parse(localStorage.getItem("mevzu_postlar") || "[]");
+        const yeni = [{ id: Date.now(), img: thumbImg, date: new Date().toISOString() }, ...mevcutlar].slice(0, 30);
+        localStorage.setItem("mevzu_postlar", JSON.stringify(yeni));
+      } catch { }
+
+      markQuoteUsed(q);
+      if (gecmisAcik) setGecmis(getQuoteHistory());
+    } catch (err) {
+      alert("Video oluşturulamadı. Chrome tarayıcı gereklidir.\n" + err.message);
+      setVideoStatus("idle");
+    }
+  };
+
+  const videoIndir = () => {
+    if (!videoUrl) return;
+    const a = document.createElement("a");
+    a.href = videoUrl; a.download = `mevzu-otomatik-${boyut}-${Date.now()}.webm`; a.click();
   };
 
   return (
@@ -159,6 +279,45 @@ export default function SurprizPage({ tema, onBack }) {
             border: "none", borderRadius: 10, padding: "13px 0", cursor: s ? "pointer" : "not-allowed",
             fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
           }}>⬇ İndir</button>
+        </div>
+
+        <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8 }}>
+          {videoStatus === "recording" && (
+            <div style={{ height: 3, background: T.border, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", background: T.gold, width: `${videoProgress}%`, transition: "width .1s linear" }} />
+            </div>
+          )}
+          {videoStatus === "idle" && (
+            <button onClick={videoOlustur} disabled={!s} style={{
+              background: "transparent", border: `1px solid ${T.gold}`, borderRadius: 10,
+              padding: "13px 0", cursor: s ? "pointer" : "not-allowed", color: T.gold, fontFamily: "inherit",
+              fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
+            }}>🎬 Otomatik Video Oluştur (10sn)</button>
+          )}
+          {videoStatus === "countdown" && (
+            <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "11px 0", textAlign: "center", color: T.gold, fontSize: 22, fontWeight: 700 }}>{videoCountdown}</div>
+          )}
+          {videoStatus === "recording" && (
+            <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "13px 0", textAlign: "center", color: T.muted, fontSize: 10, letterSpacing: 1, textTransform: "uppercase" }}>
+              Video oluşturuluyor — %{Math.round(videoProgress)}
+            </div>
+          )}
+          {videoStatus === "done" && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={videoIndir} style={{
+                flex: 3, background: T.gold, color: "#1a1200", border: "none", borderRadius: 10,
+                padding: "11px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 700,
+                letterSpacing: 2, textTransform: "uppercase",
+              }}>⬇ Videoyu İndir</button>
+              <button onClick={videoSifirla} style={{
+                flex: 1, background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10,
+                padding: "11px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600,
+              }}>↺</button>
+            </div>
+          )}
+          {videoStatus === "idle" && (
+            <div style={{ fontSize: 9, color: T.faint, textAlign: "center" }}>Chrome gerekli · söz, görsel efekt ve müzik otomatik seçilir</div>
+          )}
         </div>
 
         <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10 }}>
