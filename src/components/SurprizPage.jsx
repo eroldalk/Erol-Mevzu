@@ -43,7 +43,9 @@ export default function SurprizPage({ tema, onBack }) {
   const [toplam, setToplam] = useState(null);
   const [gecmisAcik, setGecmisAcik] = useState(false);
   const [gecmis, setGecmis] = useState([]);
+  const [boyut, setBoyut] = useState("kare");
   const cardRef = useRef(null);
+  const portrait = boyut === "story";
 
   const karistir = async () => {
     setS(null);
@@ -88,7 +90,7 @@ export default function SurprizPage({ tema, onBack }) {
     } catch { }
 
     const link = document.createElement("a");
-    link.download = `mevzu-surpriz-${Date.now()}.png`;
+    link.download = `mevzu-surpriz-${boyut}-${Date.now()}.png`;
     link.href = fullImg;
     link.click();
 
@@ -108,7 +110,16 @@ export default function SurprizPage({ tema, onBack }) {
       }}>
         <button onClick={onBack} style={{ background: "none", border: "none", color: T.faint, fontSize: 22, cursor: "pointer" }}>←</button>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase", color: T.gold }}>Sürpriz Kart</span>
-        <span style={{ fontSize: 9, color: T.faint, textTransform: "uppercase", letterSpacing: 2 }}>1:1</span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {[["kare", "1:1"], ["story", "9:16"]].map(([v, lbl]) => (
+            <button key={v} onClick={() => setBoyut(v)} style={{
+              background: boyut === v ? `rgba(${T.gr},.12)` : "none",
+              border: `1px solid ${boyut === v ? T.gold : "transparent"}`, borderRadius: 6,
+              padding: "3px 8px", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 9, color: boyut === v ? T.gold : T.faint, textTransform: "uppercase", letterSpacing: 2,
+            }}>{lbl}</button>
+          ))}
+        </div>
       </div>
 
       <div style={{
@@ -117,8 +128,13 @@ export default function SurprizPage({ tema, onBack }) {
         background: `radial-gradient(ellipse 60% 50% at 50% 50%, rgba(${T.gr},.05) 0%, transparent 70%), ${T.bg}`,
       }}>
         {s
-          ? <Card s={s} cardRef={cardRef} />
-          : <div style={{ width: "min(500px, calc(100vw - 32px))", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", color: T.faint, fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>Söz aranıyor...</div>
+          ? <Card s={s} cardRef={cardRef} portrait={portrait} />
+          : <div style={{
+              width: portrait ? "min(260px, calc(100vw - 40px))" : "min(500px, calc(100vw - 32px))",
+              aspectRatio: portrait ? "9/16" : "1",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: T.faint, fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
+            }}>Söz aranıyor...</div>
         }
 
         {kalan !== null && (
