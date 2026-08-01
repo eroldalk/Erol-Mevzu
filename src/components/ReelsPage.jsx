@@ -6,6 +6,11 @@ import Card from "./Card";
 import Panel from "./Panel";
 import { Play, Square, Download } from "lucide-react";
 
+function hexRgb(hex) {
+  const h = (hex || "#c9a84c").replace("#", "");
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+
 // Canvas renderers for video recording (maps bgAnim → canvas) — Card.jsx'teki animasyonlu arkaplanların canvas karşılığı
 const BG_RENDERERS = {
   none: (cv, cx, s) => { cx.fillStyle = s.color?.bg || "#1a1208"; cx.fillRect(0, 0, cv.width, cv.height); },
@@ -33,26 +38,30 @@ const BG_RENDERERS = {
   },
   stars: (cv, cx, s, t) => {
     cx.fillStyle = s.color?.bg || "#141414"; cx.fillRect(0, 0, cv.width, cv.height);
+    const { r, g, b } = hexRgb(s.color?.text);
     for (let i = 0; i < 55; i++) {
       const sx = (i * 173.7 * cv.width / 100) % cv.width;
       const sy = (i * 97.3 * cv.height / 100) % cv.height;
       const op = 0.3 + Math.sin(t * 0.003 + i) * 0.25;
-      cx.fillStyle = `rgba(201,168,76,${op})`; cx.beginPath(); cx.arc(sx, sy, i % 5 === 0 ? 2 : 1, 0, Math.PI * 2); cx.fill();
+      cx.fillStyle = `rgba(${r},${g},${b},${op})`; cx.beginPath(); cx.arc(sx, sy, i % 5 === 0 ? 2 : 1, 0, Math.PI * 2); cx.fill();
     }
   },
   rings: (cv, cx, s, t) => {
     cx.fillStyle = s.color?.bg || "#141414"; cx.fillRect(0, 0, cv.width, cv.height);
+    const ringColor = s.color?.text || "#c9a84c";
     for (let i = 0; i < 5; i++) {
       const phase = (t * 0.0008 + i * 0.2) % 1;
       const r = phase * Math.max(cv.width, cv.height) * 0.7;
       const op = (1 - phase) * 0.12;
-      cx.strokeStyle = `rgba(201,168,76,${op})`; cx.lineWidth = 1.5;
+      const alphaHex = Math.round(op * 255).toString(16).padStart(2, "0");
+      cx.strokeStyle = ringColor + alphaHex; cx.lineWidth = 1.5;
       cx.beginPath(); cx.arc(cv.width / 2, cv.height / 2, r, 0, Math.PI * 2); cx.stroke();
     }
   },
   rain: (cv, cx, s, t) => {
     cx.fillStyle = s.color?.bg || "#141414"; cx.fillRect(0, 0, cv.width, cv.height);
-    cx.strokeStyle = "rgba(201,168,76,0.18)"; cx.lineWidth = 1;
+    const { r, g, b } = hexRgb(s.color?.text);
+    cx.strokeStyle = `rgba(${r},${g},${b},0.18)`; cx.lineWidth = 1;
     for (let i = 0; i < 30; i++) {
       const x = (i * 53 + Math.sin(i * 3.7) * 40 + t * 0.05) % cv.width;
       const y = (i * cv.height / 30 + t * 0.12) % cv.height;
@@ -117,6 +126,18 @@ const BG_RENDERERS = {
 
 const ease = (t, start, dur) => Math.max(0, Math.min(1, (t - start) / dur));
 
+function hexToRgbArr(hex) {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lerpColor(a, b, t) {
+  const [ar, ag, ab] = hexToRgbArr(a);
+  const [br, bg, bb] = hexToRgbArr(b);
+  return `rgb(${Math.round(ar + (br - ar) * t)},${Math.round(ag + (bg - ag) * t)},${Math.round(ab + (bb - ab) * t)})`;
+}
+
 // Yazı Efekti (textAnim) → Card.jsx'teki CSS keyframe'lerin canvas karşılığı
 function textAnimFrame(anim, tMs) {
   const cyc = (period) => (((tMs % period) + period) % period) / period;
@@ -152,9 +173,14 @@ function textAnimFrame(anim, tMs) {
       return { alphaMul: dim ? 0.12 : 1 };
     }
     case "neon": {
+      // CSS'teki keyframe'ler renkler arasında sürekli geçiş yapıyor (ör. altın→mavi
+      // yumuşakça karışıyor) — burada da ayrık zıplama yerine iki durak arasında
+      // enterpolasyon yapıyoruz, sondan başa (yeşil→altın) dönüş de dahil.
       const colors = ["#c9a84c", "#4af", "#f4a", "#4fa"];
-      const p = cyc(3500);
-      return { shadowColor: colors[Math.min(3, Math.floor(p * 4))], shadowBlur: 16 };
+      const p = cyc(3500) * colors.length;
+      const i = Math.floor(p) % colors.length;
+      const frac = p - Math.floor(p);
+      return { shadowColor: lerpColor(colors[i], colors[(i + 1) % colors.length], frac), shadowBlur: 16 };
     }
     case "shimmer":
       return { shimmerPhase: cyc(2500) };
@@ -179,8 +205,7 @@ function drawAnimatedText(cx, text, x, y, color, font, fontPx, anim, tMs, align,
   if (frame.scale) cx.scale(frame.scale, frame.scale);
   cx.globalAlpha = baseAlpha * (frame.alphaMul !== undefined ? frame.alphaMul : 1);
   if (depthShadow) { cx.shadowColor = `rgba(0,0,0,${depthShadow.opacity})`; cx.shadowBlur = depthShadow.blur; cx.shadowOffsetY = depthShadow.offsetY || 0; }
-  if (anim === "glow") { cx.shadowColor = color; cx.shadowBlur = frame.shadowBlur; cx.shadowOffsetY = 0; }
-  else if (frame.shadowColor) { cx.shadowColor = frame.shadowColor; cx.shadowBlur = frame.shadowBlur; cx.shadowOffsetY = 0; }
+  const glowColor = anim === "glow" ? color : frame.shadowColor;
   let fillStyle = color;
   if (gradient) {
     const w = cx.measureText(text).width;
@@ -189,6 +214,17 @@ function drawAnimatedText(cx, text, x, y, color, font, fontPx, anim, tMs, align,
     grad.addColorStop(0, gradient.from);
     grad.addColorStop(1, gradient.to);
     fillStyle = grad;
+  }
+  if (glowColor) {
+    // CSS'teki üst üste yığılmış text-shadow katmanlarına yakın durması için canvas'ta
+    // da tek pas yerine gittikçe daralan blur ile 2 ek katman çiziyoruz — tek katman
+    // videoda CSS'e göre fark edilmeyecek kadar soluk kalıyordu.
+    cx.shadowColor = glowColor; cx.shadowOffsetY = 0;
+    cx.fillStyle = fillStyle;
+    cx.shadowBlur = frame.shadowBlur * 1.8;
+    cx.fillText(text, 0, 0);
+    cx.shadowBlur = frame.shadowBlur;
+    cx.fillText(text, 0, 0);
   }
   cx.fillStyle = fillStyle;
   cx.fillText(text, 0, 0);
@@ -758,7 +794,7 @@ export default function ReelsPage({ tema, onBack }) {
   );
 
   const topBar = (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: T.bg2, borderBottom: `1px solid ${T.border}`, flexShrink: 0, zIndex: 100, position: "sticky", top: 0 }}>
+    <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: T.bg2, borderBottom: `1px solid ${T.border}`, flexShrink: 0, zIndex: 100, position: "sticky", top: 0 }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: T.faint, fontSize: 22, cursor: "pointer" }}>←</button>
       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase", color: T.gold }}>Reels Kart</span>
       <span style={{ fontSize: 9, color: T.faint, textTransform: "uppercase", letterSpacing: 2 }}>9:16</span>
