@@ -95,6 +95,7 @@ export default function SurprizPage({ tema, onBack }) {
     if (currentQuote) {
       markQuoteUsed(currentQuote);
       setKalan((k) => (k !== null ? Math.max(0, k - 1) : k));
+      if (gecmisAcik) setGecmis(getQuoteHistory());
     }
   };
 

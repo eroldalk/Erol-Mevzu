@@ -31,13 +31,14 @@ function getUsed() {
 }
 
 // Sayfayı açmak / "Yeniden Karıştır" bir sözü tüketmez — sadece görüntüler.
-// Bir söz yalnızca gerçekten indirildiğinde (markQuoteUsed) havuzdan düşer.
+// Bir söz yalnızca gerçekten indirildiğinde (markQuoteUsed) havuzdan düşer ve geçmişe eklenir.
 export function markQuoteUsed(quote) {
   const used = getUsed();
   const next = used.includes(quote.id) ? used : [...used, quote.id];
   const poolSize = quote.poolTotal || next.length;
   // Havuzun tamamı indirildiyse listeyi sıfırla, yeni bir tur başlasın.
   localStorage.setItem(USED_KEY, JSON.stringify(next.length >= poolSize ? [] : next));
+  addToHistory(quote);
 }
 
 function addToHistory(quote) {
@@ -59,6 +60,5 @@ export async function getRandomQuote() {
   const available = pool.filter((q) => !used.includes(q.id));
   const source = available.length > 0 ? available : pool;
   const chosen = source[Math.floor(Math.random() * source.length)];
-  addToHistory(chosen);
   return { ...chosen, poolTotal: pool.length, poolRemaining: available.length };
 }

@@ -513,7 +513,6 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
             </div>
           )}
           <DragBox drag={qd} style={{ left:36,top:80 }}>
-            <div style={{ fontFamily:"Georgia,serif",fontSize:86,lineHeight:.65,opacity:.07,color:t,userSelect:"none",marginBottom:4 }}>"</div>
             <Q />
           </DragBox>
           <DragBox drag={ad} style={{ left:36,bottom:36 }}>
@@ -530,12 +529,6 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
             </div>
           )}
           <DragBox drag={qd} style={{ left:22,top:90 }}>
-            {s.cat && (
-              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:16 }}>
-                <div style={{ width:4,height:4,borderRadius:"50%",background:t,opacity:.4 }} />
-                <span style={{ fontSize:8,letterSpacing:5,textTransform:"uppercase",color:t,opacity:.45 }}>{s.cat}</span>
-              </div>
-            )}
             <Q />
           </DragBox>
           <DragBox drag={ad} style={{ left:22,bottom:32 }}>
