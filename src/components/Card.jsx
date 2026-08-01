@@ -424,7 +424,8 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
 
   // Yazı fontu, gradient metin rengi ve gölge/blur derinlik efekti
   const fontPreset = FONT_PRESETS[s.fontStyle] || FONT_PRESETS["serif-italic"];
-  const gradientOn = s.textGradient?.enabled && (s.textAnim || "none") !== "shimmer";
+  const shimmerOn = (s.textAnim || "none") === "shimmer";
+  const gradientOn = s.textGradient?.enabled && !shimmerOn;
   const gradientStyle = gradientOn ? {
     background: `linear-gradient(90deg, ${s.textGradient.from}, ${s.textGradient.to})`,
     WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
@@ -433,11 +434,16 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
   const shadowStyle = s.textShadow?.enabled ? {
     textShadow: `0 ${Math.round(2 + (s.textShadow.intensity / 100) * 6)}px ${Math.round(4 + (s.textShadow.intensity / 100) * 20)}px rgba(0,0,0,${(0.15 + (s.textShadow.intensity / 100) * 0.45).toFixed(2)})`,
   } : {};
+  // html2canvas background-clip:text'i desteklemiyor — shimmer'ın kendi gradyanı da
+  // textGradient gibi çekim öncesi düz renge indirgenmeli, yoksa metnin arkasında
+  // düz bir gradyan kutusu görünür.
+  const captureFixOn = gradientOn || shimmerOn;
+  const captureFixFallback = gradientOn ? s.textGradient.from : t;
 
   const Q = () => (
     <span
-      data-mevzu-gradient={gradientOn ? "1" : undefined}
-      data-mevzu-gradient-fallback={gradientOn ? s.textGradient.from : undefined}
+      data-mevzu-gradient={captureFixOn ? "1" : undefined}
+      data-mevzu-gradient-fallback={captureFixOn ? captureFixFallback : undefined}
       style={{
         fontFamily:fontPreset.family,fontWeight:fontPreset.weight,fontStyle:fontPreset.style,
         fontSize:s.fontSize,lineHeight:1.55,
@@ -453,8 +459,8 @@ export default function Card({ s, cardRef, portrait = false, dragPos, onDragMove
 
   const Author = () => (
     <span
-      data-mevzu-gradient={gradientOn ? "1" : undefined}
-      data-mevzu-gradient-fallback={gradientOn ? s.textGradient.from : undefined}
+      data-mevzu-gradient={captureFixOn ? "1" : undefined}
+      data-mevzu-gradient-fallback={captureFixOn ? captureFixFallback : undefined}
       style={{
         fontSize:10,fontWeight:300,letterSpacing:3,textTransform:"uppercase",
         color:t,opacity: hasAnim ? 1 : .5,
