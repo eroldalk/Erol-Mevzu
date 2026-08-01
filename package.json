@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "csv-parse": "^7.0.1",
     "firebase": "^12.17.0",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.395.0",
