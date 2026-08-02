@@ -215,15 +215,15 @@ export function drawAnimatedText(cx, text, x, y, color, font, fontPx, anim, tMs,
     fillStyle = grad;
   }
   if (glowColor) {
-    // CSS'teki üst üste yığılmış text-shadow katmanlarına yakın durması için canvas'ta
-    // da tek pas yerine gittikçe daralan blur ile 2 ek katman çiziyoruz — tek katman
-    // videoda CSS'e göre fark edilmeyecek kadar soluk kalıyordu.
+    // CSS'teki text-shadow'a yakın durması için tek düz pas yerine bir parıltı
+    // katmanı ekliyoruz — ama zayıf cihazlarda kasmaya yol açtığı için (özellikle
+    // hold aşamasında sürekli çizilirken) tek pasa indirdik, önceki sürüm ayrıca
+    // shadowBlur'u sıfırlamadan üçüncü bir pas daha çiziyordu (gereksiz maliyet).
     cx.shadowColor = glowColor; cx.shadowOffsetY = 0;
     cx.fillStyle = fillStyle;
-    cx.shadowBlur = frame.shadowBlur * 1.8;
+    cx.shadowBlur = frame.shadowBlur * 1.4;
     cx.fillText(text, 0, 0);
-    cx.shadowBlur = frame.shadowBlur;
-    cx.fillText(text, 0, 0);
+    cx.shadowBlur = 0;
   }
   cx.fillStyle = fillStyle;
   cx.fillText(text, 0, 0);
@@ -427,9 +427,7 @@ export function drawGlowBatch(cv, cx, s, jobs, glowColor, shadowBlur) {
   cx.save();
   cx.shadowOffsetY = 0;
   cx.shadowColor = glowColor;
-  cx.shadowBlur = shadowBlur * 1.8;
-  cx.drawImage(gc, 0, 0);
-  cx.shadowBlur = shadowBlur;
+  cx.shadowBlur = shadowBlur * 1.4;
   cx.drawImage(gc, 0, 0);
   cx.shadowBlur = 0;
   cx.drawImage(gc, 0, 0);

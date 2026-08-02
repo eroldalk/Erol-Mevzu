@@ -165,11 +165,9 @@ function VideoRecorder({ s, duration, T, bgMedia, bgMediaType, bgAudio, dragPos 
   const start = async () => {
     setAudioWarning(null);
     const cv = document.createElement("canvas");
-    // 320x568 çözünürlük telefon ekranında büyütülünce piksel piksel görünüyordu
-    // (kare kartın PNG indirmesi html2canvas'ta scale:2 kullanıyor, video canvas'ı
-    // kullanmıyordu) — 1.5x çözünürlüğe çıkarıyoruz, SCALE oranı zaten her boyutu
-    // buna göre otomatik ölçekliyor.
-    cv.width = 480; cv.height = 852;
+    // 1.5x çözünürlük zayıf cihazlarda hold aşamasında (glow/arkaplan aynı anda
+    // çizilirken) donmaya yol açtı — performans önceliğiyle 1x'e geri döndük.
+    cv.width = 320; cv.height = 568;
     const cx = cv.getContext("2d");
     const snap = { ...s };
 

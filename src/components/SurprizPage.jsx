@@ -137,9 +137,10 @@ export default function SurprizPage({ tema, onBack }) {
     const track = pickMusicTrack(currentQuote.cat);
 
     const cv = document.createElement("canvas");
-    // 1.5x çözünürlük — 320x568'de ince detaylar (özellikle logo) telefon ekranında
-    // büyütülünce piksel piksel görünüyordu; SCALE oranı her boyutu buna göre ölçekliyor.
-    cv.width = 480; cv.height = 852;
+    // 1.5x çözünürlük zayıf cihazlarda hold aşamasında (glow/arkaplan aynı anda
+    // çizilirken) donmaya yol açtı — performans önceliğiyle 1x'e geri döndük.
+    // Logo zaten büyütüldüğü için düşük çözünürlükte de eskisinden net görünüyor.
+    cv.width = 320; cv.height = 568;
     const cx = cv.getContext("2d");
 
     // Parçanın rastgele bir 10sn'lik bölümünü kullan — baştan başlaması şart değil
@@ -196,14 +197,36 @@ export default function SurprizPage({ tema, onBack }) {
       audioEl.play().catch(() => {});
       const DURATION = 10000;
       let rafStart = null;
+      let finished = false;
       const bgRender = BG_RENDERERS[state.bgAnim || "none"] || BG_RENDERERS.none;
+
+      // Zayıf cihazlarda bir karenin çizimi hata verirse rAF döngüsü sessizce
+      // durup kayıt hiç bitirilmeden uzayabiliyordu (görülen 20-30sn ve yarım
+      // kalan söz şikayeti buradan geliyordu). Süreyi rAF'a değil gerçek zamana
+      // (setTimeout) bağlayıp kesin 10sn'de zorla durduruyoruz; durdurmadan hemen
+      // önce de sözün tamamen göründüğü son kareyi çiziyoruz.
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        cancelAnimationFrame(videoRafRef.current);
+        try {
+          bgRender(cv, cx, state, DURATION - 50);
+          renderAutoQuoteFrame(cv, cx, state, DURATION - 50);
+        } catch { /* son kare çizilemese de kayıt zaten duruyor */ }
+        if (rec.state !== "inactive") rec.stop();
+      };
+      const safetyTimer = setTimeout(finish, DURATION + 300);
+
       const loop = (ts) => {
+        if (finished) return;
         if (!rafStart) rafStart = ts;
         const e = ts - rafStart;
-        bgRender(cv, cx, state, e);
-        renderAutoQuoteFrame(cv, cx, state, e);
+        try {
+          bgRender(cv, cx, state, e);
+          renderAutoQuoteFrame(cv, cx, state, e);
+        } catch (err) { console.error("Video kare çizim hatası:", err); }
         setVideoProgress(Math.min((e / DURATION) * 100, 100));
-        if (e >= DURATION) { rec.stop(); return; }
+        if (e >= DURATION) { clearTimeout(safetyTimer); finish(); return; }
         videoRafRef.current = requestAnimationFrame(loop);
       };
       videoRafRef.current = requestAnimationFrame(loop);
