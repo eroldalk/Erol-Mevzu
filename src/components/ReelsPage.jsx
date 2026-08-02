@@ -188,7 +188,9 @@ function VideoRecorder({ s, duration, T, bgMedia, bgMediaType, bgAudio, dragPos 
 
     try {
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
-      const canvasStream = cv.captureStream(30);
+      // 30fps zayıf cihazlarda tutarlı yetişmiyordu (oynatımda takılma/donma) —
+      // cihazın daha güvenilir yakalayabileceği 24fps'e düşürdük.
+      const canvasStream = cv.captureStream(24);
 
       // Ses akışı ekle
       let finalStream = canvasStream;

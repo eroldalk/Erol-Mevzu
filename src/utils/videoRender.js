@@ -295,14 +295,14 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
 
   drawLogo(cx, 26 * SCALE, 24 * SCALE, textColor, SCALE);
 
-  // Üst etiket (kategori)
+  // Üst etiket (kategori) — çok küçük ve soluktu, okunur hale getirdik
   const tagFade = ease(elapsed, 300, 500);
   if (s.tag && tagFade > 0) {
     cx.save();
-    cx.globalAlpha = tagFade * 0.4; cx.fillStyle = textColor;
-    cx.font = `700 ${Math.round(9 * SCALE)}px sans-serif`;
+    cx.globalAlpha = tagFade * 0.6; cx.fillStyle = textColor;
+    cx.font = `700 ${Math.round(12 * SCALE)}px sans-serif`;
     cx.textAlign = "right"; cx.textBaseline = "top";
-    cx.fillText(s.tag.toUpperCase(), cv.width - 26 * SCALE, 26 * SCALE);
+    cx.fillText(s.tag.toUpperCase(), cv.width - 24 * SCALE, 24 * SCALE);
     cx.restore();
   }
 
@@ -310,12 +310,14 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
   // iconMode ne olursa olsun her zaman dolduruyor, o yüzden burada iconMode'a bakmadan
   // emoji'yi kullanıyoruz. Aksi halde SVG modu seçildiğinde videoda ikon (ve onunla
   // birlikte arkaplanın büyük bölümü) hiç görünmüyordu.
+  // Metin bloğu dikeyde ortalandığı için ikonu da tam ortaya koymak yazının üstüne
+  // binmesine yol açıyordu — ikonu alt bölgeye, yazının altına indiriyoruz.
   if (!s.iconHidden && s.emoji) {
     cx.save();
     cx.globalAlpha = (s.iconOpacity ?? 0.14) * ease(elapsed, 200, 600);
-    cx.font = `${(s.iconSize || 150) * SCALE * 0.9}px sans-serif`;
+    cx.font = `${(s.iconSize || 150) * SCALE * 0.65}px sans-serif`;
     cx.textAlign = "center"; cx.textBaseline = "middle";
-    cx.fillText(s.emoji, cv.width / 2, cv.height / 2);
+    cx.fillText(s.emoji, cv.width / 2, cv.height * 0.82);
     cx.restore();
   }
 

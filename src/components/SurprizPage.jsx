@@ -25,13 +25,15 @@ function pickColor() {
 function buildState(q) {
   const emojiPool = EMOJI_CATS[q.cat] || EMOJI_CATS.Sembol;
   const iconPool = ICON_CATS[q.cat] || ICON_CATS.Sembol;
-  const useEmoji = Math.random() < 0.5;
 
   return {
     ...DEFAULT,
     layout: rand(LAYOUTS),
     color: pickColor(),
-    iconMode: useEmoji ? "emoji" : "svg",
+    // Video motoru SVG ikon çizemiyor ve emoji/svgIcon birbirinden bağımsız rastgele
+    // seçildiği için "svg" modunda önizlemedeki ikon videodakiyle uyuşmuyordu — ikonu
+    // hep emoji'de sabitleyip önizleme = video garantisi sağlıyoruz.
+    iconMode: "emoji",
     emoji: rand(emojiPool),
     svgIcon: rand(iconPool).n,
     iconSize: 120 + Math.floor(Math.random() * 80),
@@ -170,7 +172,9 @@ export default function SurprizPage({ tema, onBack }) {
 
     try {
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
-      const canvasStream = cv.captureStream(30);
+      // 30fps zayıf cihazlarda tutarlı yetişmiyordu (oynatımda takılma/donma) —
+      // cihazın daha güvenilir yakalayabileceği 24fps'e düşürdük.
+      const canvasStream = cv.captureStream(24);
       let finalStream = canvasStream;
       try {
         audioEl.currentTime = startOffset;
