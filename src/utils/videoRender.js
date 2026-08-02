@@ -306,8 +306,11 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
     cx.restore();
   }
 
-  // İkon (yalnızca emoji — SVG ikonlar video kaydında desteklenmiyor)
-  if (!s.iconHidden && s.iconMode === "emoji" && s.emoji) {
+  // İkon — Canvas'ta SVG ikon çizemiyoruz; buildState kategoriye uygun bir emoji'yi
+  // iconMode ne olursa olsun her zaman dolduruyor, o yüzden burada iconMode'a bakmadan
+  // emoji'yi kullanıyoruz. Aksi halde SVG modu seçildiğinde videoda ikon (ve onunla
+  // birlikte arkaplanın büyük bölümü) hiç görünmüyordu.
+  if (!s.iconHidden && s.emoji) {
     cx.save();
     cx.globalAlpha = (s.iconOpacity ?? 0.14) * ease(elapsed, 200, 600);
     cx.font = `${(s.iconSize || 150) * SCALE * 0.9}px sans-serif`;
@@ -323,12 +326,30 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
   const startY = (cv.height - blockH) / 2;
   const cxCenter = cv.width / 2;
 
-  lines.forEach((line, i) => {
-    const f = ease(elapsed, introEnd + i * perLine, lineFadeDur);
-    if (f <= 0) return;
-    const rise = (1 - f) * 10 * SCALE;
-    drawAnimatedText(cx, line, cxCenter, startY + i * lineHeight + fontPx - rise, textColor, quoteFont, fontPx, activeAnim, elapsed, "center", f, textGradient, depthShadow);
-  });
+  // Hold aşamasında (tüm satırlar göründükten sonra) glow/neon aktifse satırları toplu
+  // basıyoruz — maliyet satır sayısından bağımsız, sabit kalıyor. Gradyan metinle nadir
+  // rastlanan kombinasyonda (ikisi aynı anda seçilirse) eski, satır satır yola düşüyoruz.
+  const frame = textAnimFrame(activeAnim, elapsed);
+  const glowColor = activeAnim === "glow" ? textColor : frame.shadowColor;
+  const canBatch = glowColor && !textGradient;
+
+  if (canBatch) {
+    const jobs = [];
+    lines.forEach((line, i) => {
+      const f = ease(elapsed, introEnd + i * perLine, lineFadeDur);
+      if (f <= 0) return;
+      jobs.push({ text: line, x: cxCenter, y: startY + i * lineHeight + fontPx, font: quoteFont, align: "center", fillStyle: textColor });
+    });
+    if (jobs.length) drawGlowBatch(cv, cx, s, jobs, glowColor, frame.shadowBlur);
+  } else {
+    const revealStyle = getRevealStyle(s);
+    lines.forEach((line, i) => {
+      const f = ease(elapsed, introEnd + i * perLine, lineFadeDur);
+      if (f <= 0) return;
+      const { dx, dy } = revealOffset(revealStyle, f, 12 * SCALE);
+      drawAnimatedText(cx, line, cxCenter + dx, startY + i * lineHeight + fontPx + dy, textColor, quoteFont, fontPx, activeAnim, elapsed, "center", f, textGradient, depthShadow);
+    });
+  }
 
   const authorFade = ease(elapsed, authorStart, authorFadeDur);
   if (authorFade > 0 && s.author) {
@@ -357,11 +378,11 @@ export function drawLogo(cx, x, y, color, scale) {
   cx.globalAlpha = 0.9;
   cx.fillStyle = color;
   cx.textBaseline = "alphabetic";
-  const apFont = `400 ${Math.round(13 * scale)}px Georgia,serif`;
-  const hashFont = `700 ${Math.round(17 * scale)}px sans-serif`;
+  const apFont = `400 ${Math.round(16 * scale)}px Georgia,serif`;
+  const hashFont = `700 ${Math.round(21 * scale)}px sans-serif`;
   cx.font = apFont;
   const apW = cx.measureText("'").width;
-  const rowBaseline = y + 17 * scale;
+  const rowBaseline = y + 21 * scale;
   cx.textAlign = "left";
   cx.fillText("'", x, rowBaseline - 2 * scale);
   cx.font = hashFont;
@@ -369,13 +390,74 @@ export function drawLogo(cx, x, y, color, scale) {
   const hashW = cx.measureText("#").width;
   const rowW = apW + 1 * scale + hashW;
 
-  cx.font = `700 ${Math.round(8 * scale)}px sans-serif`;
-  cx.letterSpacing = `${3 * scale}px`;
+  cx.font = `700 ${Math.round(10 * scale)}px sans-serif`;
+  cx.letterSpacing = `${3.5 * scale}px`;
   const label = "MEVZU";
   const labelW = cx.measureText(label).width;
-  cx.fillText(label, x + rowW / 2 - labelW / 2, rowBaseline + 3 * scale + 8 * scale);
+  cx.fillText(label, x + rowW / 2 - labelW / 2, rowBaseline + 4 * scale + 10 * scale);
   cx.letterSpacing = "0px";
   cx.restore();
+}
+
+// glow/neon aktifken her satır kendi shadowBlur pasosunu ayrı ayrı çiziyordu — maliyet
+// satır sayısıyla orantılı büyüyüp uzun sözlerde (çok satırlı kartlarda) video kaydını
+// yavaşlatıyordu. Bunun yerine satırları önce görünmez bir katmana düz renkle çiziyor,
+// sonra o katmanı SABİT sayıda (satır sayısından bağımsız) shadowBlur pasosuyla ana
+// canvas'a basıyoruz.
+const glowCanvasCache = new WeakMap();
+function getGlowCanvas(s, w, h) {
+  let entry = glowCanvasCache.get(s);
+  if (!entry || entry.w !== w || entry.h !== h) {
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    entry = { canvas, ctx: canvas.getContext("2d"), w, h };
+    glowCanvasCache.set(s, entry);
+  }
+  return entry;
+}
+
+export function drawGlowBatch(cv, cx, s, jobs, glowColor, shadowBlur) {
+  const { canvas: gc, ctx: gcx } = getGlowCanvas(s, cv.width, cv.height);
+  gcx.clearRect(0, 0, cv.width, cv.height);
+  jobs.forEach(({ text, x, y, font, align, fillStyle }) => {
+    gcx.font = font; gcx.textAlign = align; gcx.textBaseline = "alphabetic";
+    gcx.fillStyle = fillStyle;
+    gcx.fillText(text, x, y);
+  });
+  cx.save();
+  cx.shadowOffsetY = 0;
+  cx.shadowColor = glowColor;
+  cx.shadowBlur = shadowBlur * 1.8;
+  cx.drawImage(gc, 0, 0);
+  cx.shadowBlur = shadowBlur;
+  cx.drawImage(gc, 0, 0);
+  cx.shadowBlur = 0;
+  cx.drawImage(gc, 0, 0);
+  cx.restore();
+}
+
+// Otomatik video her seferinde aynı "yukarıdan aşağı süzülme" ile belirmesin diye
+// giriş yönünü video başına bir kere rastgele seçip (aynı state için tüm karelerde
+// sabit kalsın diye) önbelleğe alıyoruz.
+const revealStyleCache = new WeakMap();
+const REVEAL_STYLES = ["fromTop", "fromBottom", "fromLeft", "fromRight", "fade"];
+export function getRevealStyle(s) {
+  let style = revealStyleCache.get(s);
+  if (!style) {
+    style = REVEAL_STYLES[Math.floor(Math.random() * REVEAL_STYLES.length)];
+    revealStyleCache.set(s, style);
+  }
+  return style;
+}
+export function revealOffset(style, f, dist) {
+  const amt = (1 - f) * dist;
+  switch (style) {
+    case "fromTop": return { dx: 0, dy: -amt };
+    case "fromBottom": return { dx: 0, dy: amt };
+    case "fromLeft": return { dx: -amt, dy: 0 };
+    case "fromRight": return { dx: amt, dy: 0 };
+    default: return { dx: 0, dy: 0 };
+  }
 }
 
 export function wrapLines(cx, text, maxWidth) {

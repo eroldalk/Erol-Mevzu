@@ -137,7 +137,9 @@ export default function SurprizPage({ tema, onBack }) {
     const track = pickMusicTrack(currentQuote.cat);
 
     const cv = document.createElement("canvas");
-    cv.width = 320; cv.height = 568;
+    // 1.5x çözünürlük — 320x568'de ince detaylar (özellikle logo) telefon ekranında
+    // büyütülünce piksel piksel görünüyordu; SCALE oranı her boyutu buna göre ölçekliyor.
+    cv.width = 480; cv.height = 852;
     const cx = cv.getContext("2d");
 
     // Parçanın rastgele bir 10sn'lik bölümünü kullan — baştan başlaması şart değil

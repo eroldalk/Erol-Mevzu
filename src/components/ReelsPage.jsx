@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { DEFAULT, FONT_PRESETS, MUSIC_LIBRARY } from "../utils/constants";
 import { TEMALAR } from "../utils/tema";
 import { useIsDesktop } from "../utils/hooks";
-import { BG_RENDERERS, ease, textAnimFrame, drawAnimatedText, wrapLinesCached, drawLogo } from "../utils/videoRender";
+import { BG_RENDERERS, ease, textAnimFrame, drawAnimatedText, drawGlowBatch, wrapLinesCached, drawLogo } from "../utils/videoRender";
 import Card from "./Card";
 import Panel from "./Panel";
 import { Play, Square, Download } from "lucide-react";
@@ -42,6 +42,14 @@ function renderCardFrame(cv, cx, s, elapsed, drag) {
   const quoteFade = ease(elapsed, 700, 650);
   const authorFade = ease(elapsed, 1450, 650);
 
+  // glow/neon aktifken her satırı ayrı ayrı shadowBlur ile çizmek maliyeti satır
+  // sayısıyla orantılı büyütüp uzun sözlerde kaydı yavaşlatıyordu — satır sayısından
+  // bağımsız, sabit maliyetli toplu çizime düşüyoruz (bkz. drawGlowBatch).
+  const activeAnim = hasAnim ? anim : "none";
+  const frame = textAnimFrame(activeAnim, elapsed);
+  const glowColor = activeAnim === "glow" ? textColor : frame.shadowColor;
+  const canBatchQuote = glowColor && !textGradient && quoteFade >= 1;
+
   // İkon (yalnızca emoji — SVG ikonlar video kaydında desteklenmiyor)
   if (!s.iconHidden && s.iconMode === "emoji" && s.emoji) {
     cx.save();
@@ -76,9 +84,12 @@ function renderCardFrame(cv, cx, s, elapsed, drag) {
     const cy = (cv.height - blockH) / 2 + dQ.y;
     const cxCenter = cv.width / 2 + dQ.x;
 
-    if (quoteFade > 0) {
+    if (canBatchQuote) {
+      const jobs = lines.map((line, i) => ({ text: line, x: cxCenter, y: cy + i * lineHeight + fontPx, font: quoteFont, align: "center", fillStyle: textColor }));
+      drawGlowBatch(cv, cx, s, jobs, glowColor, frame.shadowBlur);
+    } else if (quoteFade > 0) {
       lines.forEach((line, i) => {
-        drawAnimatedText(cx, line, cxCenter, cy + i * lineHeight + fontPx, textColor, quoteFont, fontPx, hasAnim ? anim : "none", elapsed, "center", quoteFade, textGradient, depthShadow);
+        drawAnimatedText(cx, line, cxCenter, cy + i * lineHeight + fontPx, textColor, quoteFont, fontPx, activeAnim, elapsed, "center", quoteFade, textGradient, depthShadow);
       });
     }
 
@@ -154,7 +165,11 @@ function VideoRecorder({ s, duration, T, bgMedia, bgMediaType, bgAudio, dragPos 
   const start = async () => {
     setAudioWarning(null);
     const cv = document.createElement("canvas");
-    cv.width = 320; cv.height = 568;
+    // 320x568 çözünürlük telefon ekranında büyütülünce piksel piksel görünüyordu
+    // (kare kartın PNG indirmesi html2canvas'ta scale:2 kullanıyor, video canvas'ı
+    // kullanmıyordu) — 1.5x çözünürlüğe çıkarıyoruz, SCALE oranı zaten her boyutu
+    // buna göre otomatik ölçekliyor.
+    cv.width = 480; cv.height = 852;
     const cx = cv.getContext("2d");
     const snap = { ...s };
 
