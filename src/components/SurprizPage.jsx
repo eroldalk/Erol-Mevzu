@@ -11,6 +11,17 @@ const TEXT_ANIMS = ["none", "glow", "float", "shimmer", "glitch", "pulse", "neon
 
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+// Saf rastgelelik COLORS'taki 10 koyu/10 açık temayı üst üste aynı tondan seçebiliyordu
+// (küçük örneklemde şansa bağlı olarak arka arkaya hep koyu gelebiliyordu). Bir önceki
+// tondan farklısını ağırlıklı tercih ederek koyu/açık dönüşümlü gelme ihtimalini artırıyoruz.
+let lastColorDark = null;
+function pickColor() {
+  const pool = lastColorDark === null ? COLORS : COLORS.filter((c) => c.dark !== lastColorDark);
+  const chosen = Math.random() < 0.75 ? rand(pool) : rand(COLORS);
+  lastColorDark = chosen.dark;
+  return chosen;
+}
+
 function buildState(q) {
   const emojiPool = EMOJI_CATS[q.cat] || EMOJI_CATS.Sembol;
   const iconPool = ICON_CATS[q.cat] || ICON_CATS.Sembol;
@@ -19,7 +30,7 @@ function buildState(q) {
   return {
     ...DEFAULT,
     layout: rand(LAYOUTS),
-    color: rand(COLORS),
+    color: pickColor(),
     iconMode: useEmoji ? "emoji" : "svg",
     emoji: rand(emojiPool),
     svgIcon: rand(iconPool).n,
@@ -55,6 +66,7 @@ export default function SurprizPage({ tema, onBack }) {
 
   const karistir = async () => {
     setS(null);
+    setVideoStatus("idle"); setVideoUrl(null); setVideoProgress(0);
     const q = await getRandomQuote();
     setCurrentQuote(q);
     setS(buildState(q));
@@ -115,16 +127,17 @@ export default function SurprizPage({ tema, onBack }) {
     return rand(pool.length ? pool : MUSIC_LIBRARY);
   };
 
-  const videoSifirla = () => { setVideoStatus("idle"); setVideoUrl(null); setVideoProgress(0); };
-
+  // Ekranda o an gösterilen söz/stil ne ise videoya o dönüşür — "Yeniden Karıştır" ile
+  // beğendiğin bir söz görürsün, video onun üzerine kurulur; ayrıca rastgele bir söz
+  // seçmez, kafa karıştırıcı olmasın.
   const videoOlustur = async () => {
+    if (!s || !currentQuote) return;
     setVideoUrl(null);
-    const q = await getRandomQuote();
-    const state = buildState(q);
-    const track = pickMusicTrack(q.cat);
+    const state = s;
+    const track = pickMusicTrack(currentQuote.cat);
 
     const cv = document.createElement("canvas");
-    cv.width = 320; cv.height = portrait ? 568 : 320;
+    cv.width = 320; cv.height = 568;
     const cx = cv.getContext("2d");
 
     // Parçanın rastgele bir 10sn'lik bölümünü kullan — baştan başlaması şart değil
@@ -207,7 +220,8 @@ export default function SurprizPage({ tema, onBack }) {
         localStorage.setItem("mevzu_postlar", JSON.stringify(yeni));
       } catch { }
 
-      markQuoteUsed(q);
+      markQuoteUsed(currentQuote);
+      setKalan((k) => (k !== null ? Math.max(0, k - 1) : k));
       if (gecmisAcik) setGecmis(getQuoteHistory());
     } catch (err) {
       alert("Video oluşturulamadı. Chrome tarayıcı gereklidir.\n" + err.message);
@@ -221,6 +235,11 @@ export default function SurprizPage({ tema, onBack }) {
     a.href = videoUrl; a.download = `mevzu-otomatik-${boyut}-${Date.now()}.webm`; a.click();
   };
 
+  const boyutSec = (v) => { setBoyut(v); setVideoStatus("idle"); setVideoUrl(null); setVideoProgress(0); };
+
+  const isVideo = boyut === "story";
+  const mainBusy = videoStatus === "countdown" || videoStatus === "recording";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: T.bg }}>
       <div style={{
@@ -232,7 +251,7 @@ export default function SurprizPage({ tema, onBack }) {
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase", color: T.gold }}>Sürpriz Kart</span>
         <div style={{ display: "flex", gap: 4 }}>
           {[["kare", "1:1"], ["story", "9:16"]].map(([v, lbl]) => (
-            <button key={v} onClick={() => setBoyut(v)} style={{
+            <button key={v} onClick={() => boyutSec(v)} style={{
               background: boyut === v ? `rgba(${T.gr},.12)` : "none",
               border: `1px solid ${boyut === v ? T.gold : "transparent"}`, borderRadius: 6,
               padding: "3px 8px", cursor: "pointer", fontFamily: "inherit",
@@ -247,7 +266,11 @@ export default function SurprizPage({ tema, onBack }) {
         gap: 24, padding: "32px 20px",
         background: `radial-gradient(ellipse 60% 50% at 50% 50%, rgba(${T.gr},.05) 0%, transparent 70%), ${T.bg}`,
       }}>
-        {s
+        {isVideo && videoStatus === "done" && videoUrl
+          ? <video controls autoPlay loop playsInline src={videoUrl} style={{
+              width: "min(260px, calc(100vw - 40px))", aspectRatio: "9/16", borderRadius: 8, background: "#000",
+            }} />
+          : s
           ? <Card s={s} cardRef={cardRef} portrait={portrait} />
           : <div style={{
               width: portrait ? "min(260px, calc(100vw - 40px))" : "min(500px, calc(100vw - 32px))",
@@ -268,57 +291,51 @@ export default function SurprizPage({ tema, onBack }) {
           </div>
         )}
 
+        {isVideo && mainBusy && (
+          <div style={{ width: "100%", maxWidth: 400, height: 3, background: T.border, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", background: T.gold, width: `${videoStatus === "recording" ? videoProgress : 0}%`, transition: "width .1s linear" }} />
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 400 }}>
-          <button onClick={karistir} disabled={!s} style={{
+          <button onClick={karistir} disabled={!s || mainBusy} style={{
             flex: 1, background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10,
-            padding: "13px 0", cursor: s ? "pointer" : "not-allowed", color: T.gold, fontFamily: "inherit",
-            fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
+            padding: "13px 0", cursor: (s && !mainBusy) ? "pointer" : "not-allowed", color: T.gold, fontFamily: "inherit",
+            fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: (s && !mainBusy) ? 1 : 0.5,
           }}>🎲 Yeniden Karıştır</button>
-          <button onClick={handleDownload} disabled={!s} style={{
-            flex: 1, background: `linear-gradient(135deg, ${T.gold}, #a07830)`, color: "#1a1200",
-            border: "none", borderRadius: 10, padding: "13px 0", cursor: s ? "pointer" : "not-allowed",
-            fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
-          }}>⬇ İndir</button>
+
+          {!isVideo && (
+            <button onClick={handleDownload} disabled={!s} style={{
+              flex: 1, background: `linear-gradient(135deg, ${T.gold}, #a07830)`, color: "#1a1200",
+              border: "none", borderRadius: 10, padding: "13px 0", cursor: s ? "pointer" : "not-allowed",
+              fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
+            }}>⬇ İndir</button>
+          )}
+
+          {isVideo && videoStatus !== "done" && (
+            <button onClick={videoOlustur} disabled={!s || mainBusy} style={{
+              flex: 1, background: `linear-gradient(135deg, ${T.gold}, #a07830)`, color: "#1a1200",
+              border: "none", borderRadius: 10, padding: "13px 0", cursor: (s && !mainBusy) ? "pointer" : "not-allowed",
+              fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: (s && !mainBusy) ? 1 : 0.5,
+            }}>
+              {videoStatus === "countdown" ? videoCountdown
+                : videoStatus === "recording" ? `%${Math.round(videoProgress)}`
+                : "🎬 Video Oluştur"}
+            </button>
+          )}
+
+          {isVideo && videoStatus === "done" && (
+            <button onClick={videoIndir} style={{
+              flex: 1, background: `linear-gradient(135deg, ${T.gold}, #a07830)`, color: "#1a1200",
+              border: "none", borderRadius: 10, padding: "13px 0", cursor: "pointer",
+              fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase",
+            }}>⬇ İndir</button>
+          )}
         </div>
 
-        <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8 }}>
-          {videoStatus === "recording" && (
-            <div style={{ height: 3, background: T.border, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", background: T.gold, width: `${videoProgress}%`, transition: "width .1s linear" }} />
-            </div>
-          )}
-          {videoStatus === "idle" && (
-            <button onClick={videoOlustur} disabled={!s} style={{
-              background: "transparent", border: `1px solid ${T.gold}`, borderRadius: 10,
-              padding: "13px 0", cursor: s ? "pointer" : "not-allowed", color: T.gold, fontFamily: "inherit",
-              fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", opacity: s ? 1 : 0.5,
-            }}>🎬 Otomatik Video Oluştur (10sn)</button>
-          )}
-          {videoStatus === "countdown" && (
-            <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "11px 0", textAlign: "center", color: T.gold, fontSize: 22, fontWeight: 700 }}>{videoCountdown}</div>
-          )}
-          {videoStatus === "recording" && (
-            <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "13px 0", textAlign: "center", color: T.muted, fontSize: 10, letterSpacing: 1, textTransform: "uppercase" }}>
-              Video oluşturuluyor — %{Math.round(videoProgress)}
-            </div>
-          )}
-          {videoStatus === "done" && (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={videoIndir} style={{
-                flex: 3, background: T.gold, color: "#1a1200", border: "none", borderRadius: 10,
-                padding: "11px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 700,
-                letterSpacing: 2, textTransform: "uppercase",
-              }}>⬇ Videoyu İndir</button>
-              <button onClick={videoSifirla} style={{
-                flex: 1, background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10,
-                padding: "11px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600,
-              }}>↺</button>
-            </div>
-          )}
-          {videoStatus === "idle" && (
-            <div style={{ fontSize: 9, color: T.faint, textAlign: "center" }}>Chrome gerekli · söz, görsel efekt ve müzik otomatik seçilir</div>
-          )}
-        </div>
+        {isVideo && videoStatus === "idle" && (
+          <div style={{ marginTop: -14, fontSize: 9, color: T.faint, textAlign: "center" }}>Söz, görsel efekt ve müzik otomatik seçilir · 10sn</div>
+        )}
 
         <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10 }}>
           <button onClick={gecmisiAcKapat} style={{

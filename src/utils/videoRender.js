@@ -278,7 +278,7 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
   } : null;
 
   cx.font = quoteFont;
-  const lines = wrapLines(cx, s.quote, qMax);
+  const lines = wrapLinesCached(cx, s, s.quote, qMax);
 
   // Zamanlama: 10sn'lik videoya sığacak şekilde satır başına süre otomatik ölçekleniyor
   // (kısa söz hızlı belirip uzun süre sabit kalıyor, uzun söz daha hızlı art arda geliyor).
@@ -293,13 +293,7 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
   const authorStart = quoteDoneAt + pauseAfterQuote;
   const activeAnim = elapsed >= quoteDoneAt ? anim : "none";
 
-  // Logo
-  cx.save();
-  cx.globalAlpha = 0.9; cx.fillStyle = textColor;
-  cx.font = `700 ${Math.round(12 * SCALE)}px Georgia,serif`;
-  cx.textAlign = "left"; cx.textBaseline = "top";
-  cx.fillText("❝MEVZU", 26 * SCALE, 24 * SCALE);
-  cx.restore();
+  drawLogo(cx, 26 * SCALE, 24 * SCALE, textColor, SCALE);
 
   // Üst etiket (kategori)
   const tagFade = ease(elapsed, 300, 500);
@@ -356,6 +350,34 @@ export function renderAutoQuoteFrame(cv, cx, s, elapsed) {
   }
 }
 
+// Logo.jsx bileşeninin ("'#" üstte yan yana, altında küçük "MEVZU") canvas karşılığı —
+// video render'larda tek satır "❝MEVZU" yazılıyordu, gerçek logoyla uyuşmuyordu.
+export function drawLogo(cx, x, y, color, scale) {
+  cx.save();
+  cx.globalAlpha = 0.9;
+  cx.fillStyle = color;
+  cx.textBaseline = "alphabetic";
+  const apFont = `400 ${Math.round(13 * scale)}px Georgia,serif`;
+  const hashFont = `700 ${Math.round(17 * scale)}px sans-serif`;
+  cx.font = apFont;
+  const apW = cx.measureText("'").width;
+  const rowBaseline = y + 17 * scale;
+  cx.textAlign = "left";
+  cx.fillText("'", x, rowBaseline - 2 * scale);
+  cx.font = hashFont;
+  cx.fillText("#", x + apW + 1 * scale, rowBaseline);
+  const hashW = cx.measureText("#").width;
+  const rowW = apW + 1 * scale + hashW;
+
+  cx.font = `700 ${Math.round(8 * scale)}px sans-serif`;
+  cx.letterSpacing = `${3 * scale}px`;
+  const label = "MEVZU";
+  const labelW = cx.measureText(label).width;
+  cx.fillText(label, x + rowW / 2 - labelW / 2, rowBaseline + 3 * scale + 8 * scale);
+  cx.letterSpacing = "0px";
+  cx.restore();
+}
+
 export function wrapLines(cx, text, maxWidth) {
   const out = [];
   (text || "").split("\n").forEach(paragraph => {
@@ -370,4 +392,18 @@ export function wrapLines(cx, text, maxWidth) {
     if (cur) out.push(cur);
   });
   return out;
+}
+
+// wrapLines her satırı ölçmek için birden çok measureText çağırıyor — bunu video
+// kaydının rAF döngüsünde (saniyede ~30 kez) yeniden hesaplamak gereksiz CPU yükü
+// yaratıp kare düşürüyordu (izlerken takılma). Aynı state nesnesi + font + genişlik
+// için sonucu bir kere hesaplayıp önbelleğe alıyoruz.
+const linesCache = new WeakMap();
+export function wrapLinesCached(cx, s, text, maxWidth) {
+  const key = `${text}|${cx.font}|${maxWidth}`;
+  const hit = linesCache.get(s);
+  if (hit && hit.key === key) return hit.value;
+  const value = wrapLines(cx, text, maxWidth);
+  linesCache.set(s, { key, value });
+  return value;
 }

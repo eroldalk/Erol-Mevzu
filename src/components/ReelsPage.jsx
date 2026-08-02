@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { DEFAULT, FONT_PRESETS, MUSIC_LIBRARY } from "../utils/constants";
 import { TEMALAR } from "../utils/tema";
 import { useIsDesktop } from "../utils/hooks";
-import { BG_RENDERERS, ease, textAnimFrame, drawAnimatedText, wrapLines } from "../utils/videoRender";
+import { BG_RENDERERS, ease, textAnimFrame, drawAnimatedText, wrapLinesCached, drawLogo } from "../utils/videoRender";
 import Card from "./Card";
 import Panel from "./Panel";
 import { Play, Square, Download } from "lucide-react";
@@ -36,7 +36,7 @@ function renderCardFrame(cv, cx, s, elapsed, drag) {
   } : null;
 
   cx.font = quoteFont;
-  const lines = wrapLines(cx, s.quote, qMax);
+  const lines = wrapLinesCached(cx, s, s.quote, qMax);
 
   const tagFade = ease(elapsed, 300, 500);
   const quoteFade = ease(elapsed, 700, 650);
@@ -54,12 +54,7 @@ function renderCardFrame(cv, cx, s, elapsed, drag) {
 
   // Logo işareti
   const logoPos = layout === "c" ? [22, 28] : layout === "a" ? [28, 24] : [36, 28];
-  cx.save();
-  cx.globalAlpha = 0.9; cx.fillStyle = textColor;
-  cx.font = `700 ${Math.round(11 * SCALE)}px Georgia,serif`;
-  cx.textAlign = "left"; cx.textBaseline = "top";
-  cx.fillText("❝MEVZU", logoPos[0] * SCALE + dL.x, logoPos[1] * SCALE + dL.y);
-  cx.restore();
+  drawLogo(cx, logoPos[0] * SCALE + dL.x, logoPos[1] * SCALE + dL.y, textColor, SCALE);
 
   // Üst etiket
   if (s.tag && tagFade > 0) {
